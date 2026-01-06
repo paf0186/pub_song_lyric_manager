@@ -3,8 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        // Set base path for assets - detect if we're under a subpath
+        const path = window.location.pathname;
+        const match = path.match(/^(\/[^\/]+)\//);
+        if (match && !path.startsWith('/index') && !path.startsWith('/list') && !path.startsWith('/catalog') && !path.startsWith('/admin')) {
+            document.write('<base href="' + match[1] + '/">');
+        } else {
+            document.write('<base href="/">');
+        }
+    </script>
     <title>Admin - MN Shanty & Pub Sings</title>
-    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
     <!-- Login Screen -->
@@ -28,7 +38,7 @@
         <!-- Header -->
         <header class="header">
             <div class="header-content">
-                <a href="/" class="btn btn-secondary btn-small">
+                <a href="./" class="btn btn-secondary btn-small">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M19 12H5M12 19l-7-7 7-7"/>
                     </svg>
@@ -149,8 +159,8 @@
     <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="/js/admin.js"></script>
-    <script src="/js/theme.js"></script>
+    <script src="js/admin.js"></script>
+    <script src="js/theme.js"></script>
     <script>
         // Hook up admin theme toggle button
         const themeBtn = document.getElementById('themeToggleBtn');

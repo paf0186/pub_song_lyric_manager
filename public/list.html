@@ -3,8 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        // Set base path for assets - detect if we're under a subpath
+        const path = window.location.pathname;
+        const match = path.match(/^(\/[^\/]+)\//);
+        if (match && !path.startsWith('/index') && !path.startsWith('/list') && !path.startsWith('/catalog') && !path.startsWith('/admin')) {
+            document.write('<base href="' + match[1] + '/">');
+        } else {
+            document.write('<base href="/">');
+        }
+    </script>
     <title>Song List - MN Shanty & Pub Sings</title>
-    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="css/styles.css">
     <style>
         .qr-section {
             text-align: center;
@@ -31,8 +41,8 @@
     <nav class="side-menu" id="sideMenu">
         <div class="menu-header">MN Shanty & Pub Sings</div>
         <div class="menu-items" id="menuItems">
-            <a href="/" class="menu-item">Home</a>
-            <a href="/catalog.html" class="menu-item">All Songs</a>
+            <a href="./" class="menu-item">Home</a>
+            <a href="catalog.html" class="menu-item">All Songs</a>
             <div class="menu-section-title">Song Lists</div>
             <!-- Dynamic list items will be inserted here -->
         </div>
@@ -41,7 +51,7 @@
                 <span class="theme-toggle-icon">◐</span>
                 <span class="theme-toggle-text">Theme: Auto</span>
             </button>
-            <a href="/admin.html" class="admin-link" style="margin-top: 0.5rem;">
+            <a href="admin.html" class="admin-link" style="margin-top: 0.5rem;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="12" cy="12" r="3"></circle>
                     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
@@ -86,7 +96,7 @@
         </div>
         <div class="empty-state" id="notFoundState" style="display: none;">
             <h3>List not found</h3>
-            <p>This song list doesn't exist. <a href="/">Go home</a></p>
+            <p>This song list doesn't exist. <a href="./">Go home</a></p>
         </div>
     </main>
 
@@ -170,7 +180,7 @@
 
         async function loadList() {
             try {
-                const response = await fetch(`/api/lists/${listId}`);
+                const response = await fetch(`api/lists/${listId}`);
 
                 if (!response.ok) {
                     showNotFound();
@@ -194,7 +204,7 @@
 
         async function loadQrCode() {
             try {
-                const response = await fetch(`/api/qr/${listId}`);
+                const response = await fetch(`api/qr/${listId}`);
                 const data = await response.json();
                 qrCode.src = data.qrCode;
             } catch (error) {
@@ -204,7 +214,7 @@
 
         async function loadMenuLists() {
             try {
-                const response = await fetch('/api/lists');
+                const response = await fetch('api/lists');
                 const lists = await response.json();
                 renderMenuLists(lists);
             } catch (error) {
@@ -219,7 +229,7 @@
 
             lists.forEach(list => {
                 const link = document.createElement('a');
-                link.href = `/list.html?id=${list.id}`;
+                link.href = `list.html?id=${list.id}`;
                 link.className = 'menu-item list-link';
                 if (list.id === listId) {
                     link.classList.add('active');
@@ -312,7 +322,7 @@
             }
 
             try {
-                const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&listId=${listId}`);
+                const response = await fetch(`api/search?q=${encodeURIComponent(query)}&listId=${listId}`);
                 const results = await response.json();
                 renderSongs(results);
             } catch (error) {
@@ -402,7 +412,9 @@
             const song = getSongById(songId);
             if (!song) return;
 
-            const url = `${window.location.origin}/list.html?id=${listId}#song-${songId}`;
+            // Construct full URL with correct base path
+            const basePath = document.querySelector('base')?.href || window.location.origin + '/';
+            const url = new URL(`list.html?id=${listId}#song-${songId}`, basePath).href;
             try {
                 await navigator.clipboard.writeText(url);
                 const btn = event.currentTarget;
@@ -422,6 +434,6 @@
         window.copyLyrics = copyLyrics;
         window.shareSong = shareSong;
     </script>
-    <script src="/js/theme.js"></script>
+    <script src="js/theme.js"></script>
 </body>
 </html>

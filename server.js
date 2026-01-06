@@ -56,6 +56,9 @@ function recordFailedAttempt(ip) {
 app.use(express.json());
 app.use(express.static('public'));
 
+// Trust proxy headers (required for X-Forwarded-Proto, X-Forwarded-Prefix, etc.)
+app.set('trust proxy', true);
+
 // Ensure data directory and file exist
 function ensureDataFile() {
     const dataDir = path.dirname(DATA_FILE);
@@ -313,14 +316,15 @@ app.delete('/api/lists/:id', (req, res) => {
 app.get('/api/qr/:listId', async (req, res) => {
     const protocol = req.protocol;
     const host = req.get('host');
+    const basePath = process.env.BASE_PATH || req.get('x-forwarded-prefix') || '';
     let url;
 
     // Special case for home page
     if (req.params.listId === 'home') {
-        url = `${protocol}://${host}/`;
+        url = `${protocol}://${host}${basePath}/`;
     } else if (req.params.listId === 'catalog') {
         // Special case for catalog page
-        url = `${protocol}://${host}/catalog.html`;
+        url = `${protocol}://${host}${basePath}/catalog.html`;
     } else {
         const data = readData();
         const list = data.lists.find(l => l.id === req.params.listId);
@@ -329,7 +333,7 @@ app.get('/api/qr/:listId', async (req, res) => {
             return res.status(404).json({ error: 'List not found' });
         }
 
-        url = `${protocol}://${host}/list.html?id=${list.id}`;
+        url = `${protocol}://${host}${basePath}/list.html?id=${list.id}`;
     }
 
     try {
