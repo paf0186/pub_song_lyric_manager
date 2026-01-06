@@ -6,7 +6,9 @@ const QRCode = require('qrcode');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DATA_FILE = path.join(__dirname, 'data', 'data.json');
+const DATA_FILE = process.env.NODE_ENV === 'test'
+    ? path.join(__dirname, 'data', 'data.test.json')
+    : path.join(__dirname, 'data', 'data.json');
 
 // Rate limiting for login attempts
 const loginAttempts = new Map();
