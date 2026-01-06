@@ -1,11 +1,56 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const QRCode = require('qrcode');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'data', 'data.json');
+
+// Rate limiting for login attempts
+const loginAttempts = new Map();
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_TIME = 15 * 60 * 1000; // 15 minutes
+
+function hashPassword(password, salt) {
+    return crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
+}
+
+function generateSalt() {
+    return crypto.randomBytes(16).toString('hex');
+}
+
+function checkRateLimit(ip) {
+    const now = Date.now();
+    const attempts = loginAttempts.get(ip);
+
+    if (!attempts) return { allowed: true };
+
+    // Clean up old attempts
+    if (now - attempts.firstAttempt > LOCKOUT_TIME) {
+        loginAttempts.delete(ip);
+        return { allowed: true };
+    }
+
+    if (attempts.count >= MAX_ATTEMPTS) {
+        const remaining = Math.ceil((LOCKOUT_TIME - (now - attempts.firstAttempt)) / 1000 / 60);
+        return { allowed: false, remaining };
+    }
+
+    return { allowed: true };
+}
+
+function recordFailedAttempt(ip) {
+    const now = Date.now();
+    const attempts = loginAttempts.get(ip);
+
+    if (!attempts) {
+        loginAttempts.set(ip, { count: 1, firstAttempt: now });
+    } else {
+        attempts.count++;
+    }
+}
 
 // Middleware
 app.use(express.json());
@@ -61,12 +106,42 @@ function generateId() {
 // ============ AUTH ROUTES ============
 
 app.post('/api/auth/login', (req, res) => {
+    const ip = req.ip || req.connection.remoteAddress;
+    const rateCheck = checkRateLimit(ip);
+
+    if (!rateCheck.allowed) {
+        return res.status(429).json({
+            success: false,
+            error: `Too many attempts. Try again in ${rateCheck.remaining} minutes.`
+        });
+    }
+
     const { password } = req.body;
     const data = readData();
 
-    if (password === data.admin.password) {
+    // Support both hashed and plain text passwords for migration
+    let isValid = false;
+    if (data.admin.salt) {
+        // Hashed password
+        const hash = hashPassword(password, data.admin.salt);
+        isValid = hash === data.admin.password;
+    } else {
+        // Plain text password (legacy) - migrate to hashed
+        isValid = password === data.admin.password;
+        if (isValid) {
+            // Migrate to hashed password
+            const salt = generateSalt();
+            data.admin.salt = salt;
+            data.admin.password = hashPassword(password, salt);
+            writeData(data);
+        }
+    }
+
+    if (isValid) {
+        loginAttempts.delete(ip); // Clear failed attempts on success
         res.json({ success: true, token: 'admin-token-' + Date.now() });
     } else {
+        recordFailedAttempt(ip);
         res.status(401).json({ success: false, error: 'Invalid password' });
     }
 });
@@ -240,8 +315,11 @@ app.get('/api/qr/:listId', async (req, res) => {
     const host = req.get('host');
     let url;
 
-    // Special case for catalog page
-    if (req.params.listId === 'catalog') {
+    // Special case for home page
+    if (req.params.listId === 'home') {
+        url = `${protocol}://${host}/`;
+    } else if (req.params.listId === 'catalog') {
+        // Special case for catalog page
         url = `${protocol}://${host}/catalog.html`;
     } else {
         const data = readData();

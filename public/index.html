@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Song Lyrics</title>
+    <title>Minnesota Shanty & Pub Sings</title>
     <link rel="stylesheet" href="/css/styles.css">
     <style>
         .welcome-header {
@@ -90,7 +90,7 @@
     <!-- Side Menu -->
     <div class="menu-overlay" id="menuOverlay"></div>
     <nav class="side-menu" id="sideMenu">
-        <div class="menu-header">Song Lyrics</div>
+        <div class="menu-header">MN Shanty & Pub Sings</div>
         <div class="menu-items" id="menuItems">
             <a href="/" class="menu-item active">Home</a>
             <a href="/catalog.html" class="menu-item">All Songs</a>
@@ -118,8 +118,8 @@
     </div>
 
     <div class="welcome-container">
-        <h1 class="welcome-title">Song Lyrics</h1>
-        <p class="welcome-subtitle">Browse and sing along</p>
+        <h1 class="welcome-title">Minnesota Shanty & Pub Sings</h1>
+        <p class="welcome-subtitle">Lyrics for singing along</p>
 
         <div class="nav-links">
             <a href="/catalog.html" class="nav-link primary">
@@ -128,9 +128,15 @@
             </a>
 
             <div class="section-title" id="listsSection" style="display: none;">Song Lists</div>
-            <div id="listLinks">
+            <div id="listLinks" style="display: flex; flex-direction: column; gap: 1rem;">
                 <!-- Dynamic list links will be inserted here -->
             </div>
+        </div>
+
+        <!-- QR Code Section -->
+        <div class="qr-section" id="qrSection" style="margin-top: 2rem;">
+            <h3 style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Share this page</h3>
+            <img id="qrCode" src="" alt="QR Code" style="max-width: 120px; height: auto;">
         </div>
 
         <div class="admin-footer">
@@ -147,6 +153,7 @@
         document.addEventListener('DOMContentLoaded', async () => {
             setupMenu();
             loadData();
+            loadQrCode();
         });
 
         function setupMenu() {
@@ -215,6 +222,16 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        async function loadQrCode() {
+            try {
+                const response = await fetch('/api/qr/home');
+                const data = await response.json();
+                document.getElementById('qrCode').src = data.qrCode;
+            } catch (error) {
+                document.getElementById('qrSection').style.display = 'none';
+            }
         }
     </script>
 </body>
