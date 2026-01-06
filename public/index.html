@@ -5,57 +5,132 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Song Lyrics</title>
     <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        .welcome-container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+            text-align: center;
+        }
+        .welcome-title {
+            font-size: 1.75rem;
+            margin-bottom: 0.5rem;
+        }
+        .welcome-subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+        }
+        .nav-links {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .nav-link {
+            display: block;
+            padding: 1rem 1.5rem;
+            background: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            text-decoration: none;
+            color: var(--text-primary);
+            font-weight: 500;
+            transition: box-shadow 0.2s, transform 0.1s;
+        }
+        .nav-link:hover {
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-1px);
+        }
+        .nav-link.primary {
+            background: var(--primary-color);
+            color: white;
+        }
+        .nav-link .link-meta {
+            font-size: 0.8125rem;
+            font-weight: normal;
+            opacity: 0.8;
+            margin-top: 0.25rem;
+        }
+        .section-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin: 1.5rem 0 0.75rem;
+            text-align: left;
+        }
+        .admin-footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border-color);
+        }
+        .admin-footer a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.875rem;
+        }
+        .admin-footer a:hover {
+            color: var(--primary-color);
+        }
+    </style>
 </head>
 <body>
-    <!-- Side Menu -->
-    <div class="menu-overlay" id="menuOverlay"></div>
-    <nav class="side-menu" id="sideMenu">
-        <div class="menu-header">Song Lyrics</div>
-        <div class="menu-items" id="menuItems">
-            <a href="/" class="menu-item active">All Songs</a>
-            <div class="menu-section-title">Song Lists</div>
-            <!-- Dynamic list items will be inserted here -->
-        </div>
-        <div class="menu-footer">
-            <a href="/admin.html" class="admin-link">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="3"></circle>
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                </svg>
-                Admin Panel
-            </a>
-        </div>
-    </nav>
+    <div class="welcome-container">
+        <h1 class="welcome-title">Song Lyrics</h1>
+        <p class="welcome-subtitle">Browse and sing along</p>
 
-    <!-- Header -->
-    <header class="header">
-        <div class="header-content">
-            <button class="menu-btn" id="menuBtn" aria-label="Open menu">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
-            <h1 class="header-title">All Songs</h1>
-            <div class="search-container">
-                <input type="search" class="search-input" id="searchInput" placeholder="Search lyrics...">
+        <div class="nav-links">
+            <a href="/catalog.html" class="nav-link primary">
+                All Songs
+                <div class="link-meta" id="songCount">Loading...</div>
+            </a>
+
+            <div class="section-title" id="listsSection" style="display: none;">Song Lists</div>
+            <div id="listLinks">
+                <!-- Dynamic list links will be inserted here -->
             </div>
         </div>
-    </header>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <div class="song-list" id="songList">
-            <!-- Songs will be loaded here -->
+        <div class="admin-footer">
+            <a href="/admin.html">Admin Panel</a>
         </div>
-        <div class="empty-state" id="emptyState" style="display: none;">
-            <h3>No songs found</h3>
-            <p>Try a different search term or add songs from the admin panel.</p>
-        </div>
-    </main>
+    </div>
 
-    <!-- Toast Container -->
-    <div class="toast-container" id="toastContainer"></div>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Load song count
+            try {
+                const songsRes = await fetch('/api/songs');
+                const songs = await songsRes.json();
+                document.getElementById('songCount').textContent = `${songs.length} song${songs.length !== 1 ? 's' : ''}`;
+            } catch (e) {
+                document.getElementById('songCount').textContent = '';
+            }
 
-    <script src="/js/main.js"></script>
+            // Load lists
+            try {
+                const listsRes = await fetch('/api/lists');
+                const lists = await listsRes.json();
+
+                if (lists.length > 0) {
+                    document.getElementById('listsSection').style.display = 'block';
+                    const listLinks = document.getElementById('listLinks');
+                    listLinks.innerHTML = lists.map(list => `
+                        <a href="/list.html?id=${list.id}" class="nav-link">
+                            ${escapeHtml(list.name)}
+                            <div class="link-meta">${list.songIds.length} song${list.songIds.length !== 1 ? 's' : ''}</div>
+                        </a>
+                    `).join('');
+                }
+            } catch (e) {
+                console.error('Error loading lists:', e);
+            }
+        });
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
 </body>
 </html>

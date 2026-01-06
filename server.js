@@ -236,17 +236,23 @@ app.delete('/api/lists/:id', (req, res) => {
 // ============ QR CODE ROUTE ============
 
 app.get('/api/qr/:listId', async (req, res) => {
-    const data = readData();
-    const list = data.lists.find(l => l.id === req.params.listId);
-
-    if (!list) {
-        return res.status(404).json({ error: 'List not found' });
-    }
-
-    // Get the host from the request or use a default
     const protocol = req.protocol;
     const host = req.get('host');
-    const url = `${protocol}://${host}/list.html?id=${list.id}`;
+    let url;
+
+    // Special case for catalog page
+    if (req.params.listId === 'catalog') {
+        url = `${protocol}://${host}/catalog.html`;
+    } else {
+        const data = readData();
+        const list = data.lists.find(l => l.id === req.params.listId);
+
+        if (!list) {
+            return res.status(404).json({ error: 'List not found' });
+        }
+
+        url = `${protocol}://${host}/list.html?id=${list.id}`;
+    }
 
     try {
         const qrDataUrl = await QRCode.toDataURL(url, {

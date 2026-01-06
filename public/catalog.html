@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Song List</title>
+    <title>All Songs - Song Lyrics</title>
     <link rel="stylesheet" href="/css/styles.css">
     <style>
         .qr-section {
             text-align: center;
-            padding: 1.25rem 1rem;
-            margin-bottom: 1rem;
+            padding: 2rem 1rem;
+            margin-top: 1rem;
             background: var(--card-bg);
             border-radius: 8px;
             box-shadow: var(--shadow);
@@ -17,10 +17,10 @@
         .qr-section h3 {
             font-size: 0.875rem;
             color: var(--text-secondary);
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.75rem;
         }
         .qr-section img {
-            max-width: 120px;
+            max-width: 150px;
             height: auto;
         }
     </style>
@@ -32,7 +32,7 @@
         <div class="menu-header">Song Lyrics</div>
         <div class="menu-items" id="menuItems">
             <a href="/" class="menu-item">Home</a>
-            <a href="/catalog.html" class="menu-item">All Songs</a>
+            <a href="/catalog.html" class="menu-item active">All Songs</a>
             <div class="menu-section-title">Song Lists</div>
             <!-- Dynamic list items will be inserted here -->
         </div>
@@ -55,7 +55,7 @@
                 <span></span>
                 <span></span>
             </button>
-            <h1 class="header-title" id="pageTitle">Song List</h1>
+            <h1 class="header-title">All Songs</h1>
             <div class="search-container">
                 <input type="search" class="search-input" id="searchInput" placeholder="Search lyrics...">
             </div>
@@ -64,22 +64,18 @@
 
     <!-- Main Content -->
     <main class="main-content">
-        <!-- QR Code Section at Top -->
-        <div class="qr-section" id="qrSection">
-            <h3>Share this list</h3>
-            <img id="qrCode" src="" alt="QR Code">
-        </div>
-
         <div class="song-list" id="songList">
             <!-- Songs will be loaded here -->
         </div>
         <div class="empty-state" id="emptyState" style="display: none;">
             <h3>No songs found</h3>
-            <p>This list is empty or no songs match your search.</p>
+            <p>Try a different search term or add songs from the admin panel.</p>
         </div>
-        <div class="empty-state" id="notFoundState" style="display: none;">
-            <h3>List not found</h3>
-            <p>This song list doesn't exist. <a href="/">Go home</a></p>
+
+        <!-- QR Code Section -->
+        <div class="qr-section" id="qrSection">
+            <h3>Share this page</h3>
+            <img id="qrCode" src="" alt="QR Code">
         </div>
     </main>
 
@@ -87,8 +83,6 @@
     <div class="toast-container" id="toastContainer"></div>
 
     <script>
-        let listId = null;
-        let listData = null;
         let songs = [];
         let expandedCardId = null;
 
@@ -99,23 +93,14 @@
         const searchInput = document.getElementById('searchInput');
         const songList = document.getElementById('songList');
         const emptyState = document.getElementById('emptyState');
-        const notFoundState = document.getElementById('notFoundState');
-        const pageTitle = document.getElementById('pageTitle');
         const qrSection = document.getElementById('qrSection');
         const qrCode = document.getElementById('qrCode');
         const toastContainer = document.getElementById('toastContainer');
 
         document.addEventListener('DOMContentLoaded', () => {
-            const params = new URLSearchParams(window.location.search);
-            listId = params.get('id');
-
-            if (!listId) {
-                showNotFound();
-                return;
-            }
-
-            loadList();
+            loadSongs();
             loadMenuLists();
+            loadQrCode();
             setupEventListeners();
         });
 
@@ -138,37 +123,14 @@
             menuOverlay.classList.remove('active');
         }
 
-        async function loadList() {
+        async function loadSongs() {
             try {
-                const response = await fetch(`/api/lists/${listId}`);
-
-                if (!response.ok) {
-                    showNotFound();
-                    return;
-                }
-
-                listData = await response.json();
-                songs = listData.songs;
-
-                pageTitle.textContent = listData.name;
-                document.title = `${listData.name} - Song Lyrics`;
-
-                highlightCurrentList();
-                loadQrCode();
+                const response = await fetch('/api/songs');
+                songs = await response.json();
                 renderSongs(songs);
             } catch (error) {
-                console.error('Error loading list:', error);
-                showNotFound();
-            }
-        }
-
-        async function loadQrCode() {
-            try {
-                const response = await fetch(`/api/qr/${listId}`);
-                const data = await response.json();
-                qrCode.src = data.qrCode;
-            } catch (error) {
-                qrSection.style.display = 'none';
+                console.error('Error loading songs:', error);
+                showToast('Failed to load songs', 'error');
             }
         }
 
@@ -182,6 +144,16 @@
             }
         }
 
+        async function loadQrCode() {
+            try {
+                const response = await fetch('/api/qr/catalog');
+                const data = await response.json();
+                qrCode.src = data.qrCode;
+            } catch (error) {
+                qrSection.style.display = 'none';
+            }
+        }
+
         function renderMenuLists(lists) {
             const listSection = menuItems.querySelector('.menu-section-title');
             const existingItems = menuItems.querySelectorAll('.menu-item.list-link');
@@ -191,40 +163,19 @@
                 const link = document.createElement('a');
                 link.href = `/list.html?id=${list.id}`;
                 link.className = 'menu-item list-link';
-                if (list.id === listId) {
-                    link.classList.add('active');
-                }
                 link.textContent = list.name;
                 listSection.after(link);
             });
-        }
-
-        function highlightCurrentList() {
-            document.querySelectorAll('.menu-item').forEach(item => {
-                item.classList.remove('active');
-                if (item.href && item.href.includes(`id=${listId}`)) {
-                    item.classList.add('active');
-                }
-            });
-        }
-
-        function showNotFound() {
-            songList.style.display = 'none';
-            emptyState.style.display = 'none';
-            qrSection.style.display = 'none';
-            notFoundState.style.display = 'block';
         }
 
         function renderSongs(songsToRender) {
             if (songsToRender.length === 0) {
                 songList.innerHTML = '';
                 emptyState.style.display = 'block';
-                notFoundState.style.display = 'none';
                 return;
             }
 
             emptyState.style.display = 'none';
-            notFoundState.style.display = 'none';
 
             songList.innerHTML = songsToRender.map(song => `
                 <div class="song-card${expandedCardId === song.id ? ' expanded' : ''}" data-id="${song.id}">
@@ -266,7 +217,7 @@
             }
 
             try {
-                const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&listId=${listId}`);
+                const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
                 const results = await response.json();
                 renderSongs(results);
             } catch (error) {
