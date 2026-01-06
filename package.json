@@ -1,0 +1,14 @@
+{
+  "name": "pub-song-lyric-manager",
+  "version": "1.0.0",
+  "description": "A mobile-first song lyrics collection manager",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "qrcode": "^1.5.3"
+  }
+}

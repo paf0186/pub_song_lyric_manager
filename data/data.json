@@ -1,0 +1,26 @@
+{
+  "songs": [
+    {
+      "id": "sample1",
+      "title": "Amazing Grace",
+      "lyrics": "Amazing grace, how sweet the sound\nThat saved a wretch like me\nI once was lost, but now am found\nWas blind, but now I see\n\n'Twas grace that taught my heart to fear\nAnd grace my fears relieved\nHow precious did that grace appear\nThe hour I first believed",
+      "createdAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "sample2",
+      "title": "The Wheels on the Bus",
+      "lyrics": "The wheels on the bus go round and round\nRound and round, round and round\nThe wheels on the bus go round and round\nAll through the town\n\nThe doors on the bus go open and shut\nOpen and shut, open and shut\nThe doors on the bus go open and shut\nAll through the town",
+      "createdAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "sample3",
+      "title": "Happy Birthday",
+      "lyrics": "Happy birthday to you\nHappy birthday to you\nHappy birthday dear friend\nHappy birthday to you!",
+      "createdAt": "2024-01-01T00:00:00.000Z"
+    }
+  ],
+  "lists": [],
+  "admin": {
+    "password": "admin123"
+  }
+}
