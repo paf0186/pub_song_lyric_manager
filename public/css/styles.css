@@ -424,23 +424,44 @@ body {
     width: 28px;
     height: 28px;
     padding: 0;
-    background: var(--card-bg);
+    background: rgba(255, 255, 255, 0.9);
     border: 1px solid var(--border-color);
     border-radius: 4px;
     cursor: pointer;
-    transition: background 0.2s, border-color 0.2s;
+    transition: background 0.2s, border-color 0.2s, transform 0.1s;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .font-size-btn:hover {
-    background: var(--background);
+    background: rgba(255, 255, 255, 1);
     border-color: var(--primary-color);
+    transform: scale(1.05);
+}
+
+.font-size-btn:active {
+    transform: scale(0.95);
 }
 
 .font-size-btn svg {
     width: 14px;
     height: 14px;
-    stroke: currentColor;
+    stroke: #333;
     fill: none;
+    stroke-width: 2.5;
+}
+
+[data-theme="dark"] .font-size-btn {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+[data-theme="dark"] .font-size-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: var(--primary-color);
+}
+
+[data-theme="dark"] .font-size-btn svg {
+    stroke: #fff;
 }
 
 /* Lyrics action buttons */

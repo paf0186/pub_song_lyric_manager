@@ -1,39 +1,33 @@
 {
   "songs": [
     {
-      "id": "chariots1",
-      "title": "Chariots",
-      "lyrics": "O Shepherd o shepherd come leave off your piping\nCome listen come learn come hear what I say\nFor now is the time that has long been forespoken\nFor now is the time there'll be new tunes to play\nFor soon there comes one who brings a new music\nOf sweetness and clarity none can compare\nSo open your heart for heavenly harmony\nHere on this hill will be filling the air\n\nChorus:\nWith chariots of cherubim chanting\nAnd seraphim singing Hosanna\nAnd a choir of archangels a-carolling come\nHallelujah Hallelu\nAll the angels a-trumpeting glory\nIn praise of the Prince of Peace\n\nSee on yon stable the starlight is shimmering\nAnd glimmering and glistening and glowing with glee\nIn Bethlehem blest this baby of bliss will be\nBorn here before you as bold as can be\nAnd you'll be the first to hear the new symphony\nSongs full of gladness and glory and light\nSo learn your tunes well and play your pipes proudly\nFor the Prince of Paradise plays here tonight\n\nChorus\n\nBring your sheep bleating to this happy meeting\nTo hear how the lamb with the lion shall lie\nIt's mooing and braying you'll hear the song saying\nThe humble and lowly will be the most high\nLet the horn of the herdsman be heard up in heaven\nFor the gates are flung open for all who come near\nAnd the simplest of souls shall sing to infinity\nLift up and listen and you shall hear\n\nChorus\n\nThe warmonger's charger will thunder for freedom\nThe gun-maker's furnace will dwindle and die\nAnd muskets and sabers and swords shall be sundered\nSurrendered to the sound that is sweeping the sky\nAnd the shoes of the mighty shall dance to new measures\nAnd the jackboots of generals shall jangle no more\nAs sister and brother and father and mother\nAgree with each other the end to all war\n\nChorus\n\nAs a candle can conquer the demons of darkness\nAs a flame can keep frost from the deepest of cold\nSo a song can give hope in the depths of all danger\nAnd a line of pure melody soar in your soul\nSo sing your songs well and sing your songs sweetly\nAnd swear that your singing it never shall cease\nSo the clatter of battle and drums of disaster\nBe drowned in the sound of the pipes of peace\n\nChorus",
-      "createdAt": "2024-01-01T00:00:00.000Z"
-    },
-    {
-      "id": "bells1",
-      "title": "Bells of Norwich",
-      "lyrics": "Loud are the bells of Norwich and the people come and go\nHere by the tower of Julian I tell them what I know\n\nChorus:\nRing out bells of Norwich and let the winter come and go\nAll shall be well again I know\n\nLove like the yellow daffodil is coming through the snow\nLove like the yellow daffodil is Lord of all I know\n\nChorus\n\nRing for the yellow daffodil, the flower in the snow\nRing for the yellow daffodil and tell them what I know\n\nChorus\n\n(sung as chorus)\nAll shall be well I'm telling you let the winter come and go\nAll shall be well again I know.",
-      "createdAt": "2024-01-01T00:00:00.000Z"
-    },
-    {
-      "id": "appletree1",
+      "id": "song1",
       "title": "Apple Tree Wassail",
-      "lyrics": "O lily-white lily, o lily-white pin,\nPlease to come down and let us come in!\nLily-white lily, o lily-white smock,\nPlease to come down and pull back the lock!\n\nChorus:\n(It's) Our wassail jolly wassail!\nJoy come to our jolly wassail!\nHow well they may bloom, how well they may bear\nSo we may have apples and cider next year.\n\nO master and mistress, o are you within?\nPlease to come down and pull back the pin\n\nChorus\n\nThere was an old farmer and he had an old cow,\nBut how to milk her he didn't know how.\nHe put his old cow down in his old barn.\nAnd a little more liquor won't do us no harm.\n\nHarm me boys harm, harm me boys harm,\nA little more liquor won't do us no harm.\n\nChorus\n\nO the ringles and the jingles and the tenor of the song goes\nMerrily merrily merrily.\nO the tenor of the song goes merrily.\n\nSpoken: Hatfuls, capfuls, three-bushel bagfuls,\nLittle heaps under the stairs.\nHip hip hooray!",
-      "createdAt": "2024-01-01T00:00:00.000Z"
+      "lyrics": "Old apple tree we wassail thee"
     },
     {
-      "id": "shepherds1",
-      "title": "Shepherds Arise",
-      "lyrics": "Shepherds arise, be not afraid, with hasty steps prepare\nTo David's city, sin on earth,\nWith our blest Infant—with our blest Infant there,\nWith our blest Infant there, with our blest Infant there.\n\nSing, sing, all earth, sing, sing, all earth eternal praises sing\nTo our Redeemer, to our Redeemer and our heavenly King.\n\nLaid in a manger viewed a Child, humility Divine,\nSweet innocence sounds meek and mild.\nGrace in his features—grace in his features shine,\nGrace in his features shine, grace in his features shine.\n\nSing, sing, all earth, sing, sing, all earth eternal praises sing\nTo our Redeemer, to our Redeemer and our heavenly King.\n\nFor us the Saviour came on earth, for us his life he gave,\nTo save us from eternal death\nAnd to raise us from—and to raise us from the grave\nTo raise us from the grave and to raise us from the grave\n\nSing, sing, all earth, sing, sing, all earth eternal praises sing\nTo our Redeemer, to our Redeemer and our heavenly King.",
-      "createdAt": "2024-01-01T00:00:00.000Z"
+      "id": "song2",
+      "title": "The Bells of Norwich",
+      "lyrics": "All shall be well"
+    },
+    {
+      "id": "song3",
+      "title": "Chariots",
+      "lyrics": "Swing low\nsweet chariots"
     }
   ],
   "lists": [
     {
-      "id": "carolsing1",
-      "name": "Carol Sing",
-      "songIds": ["chariots1", "shepherds1"],
-      "createdAt": "2024-01-01T00:00:00.000Z"
+      "id": "list1",
+      "name": "Christmas Songs",
+      "songIds": [
+        "song1",
+        "song3"
+      ]
     }
   ],
   "admin": {
-    "password": "admin123"
+    "password": "b04cc054e177116ad49996e7898facd522885a403da451fe9a33c529dff6058fe5c9e5256df55c28c001899bbd8669de02244b4a9a0dc470adf16490d6d3307d",
+    "salt": "aad26db0f09d0baaf512e72188dc2f1a"
   }
 }
