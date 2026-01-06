@@ -25,7 +25,14 @@
       "createdAt": "2024-01-01T00:00:00.000Z"
     }
   ],
-  "lists": [],
+  "lists": [
+    {
+      "id": "carolsing1",
+      "name": "Carol Sing",
+      "songIds": ["appletree1", "bells1", "chariots1", "shepherds1"],
+      "createdAt": "2024-01-01T00:00:00.000Z"
+    }
+  ],
   "admin": {
     "password": "admin123"
   }
