@@ -15,6 +15,10 @@ function setupTestData(data = null) {
         ],
         admin: {
             password: 'testpass123'
+        },
+        stats: {
+            songViews: {},
+            listViews: {}
         }
     };
     fs.writeFileSync(DATA_FILE, JSON.stringify(data || defaultData, null, 2));
@@ -399,6 +403,162 @@ describe('Auth API', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
+        });
+    });
+});
+
+describe('Stats API', () => {
+    beforeEach(() => {
+        setupTestData();
+    });
+
+    describe('POST /api/stats/song/:id', () => {
+        test('tracks song view and increments count', async () => {
+            const res = await request(app).post('/api/stats/song/song1');
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.views).toBe(1);
+
+            // Second view should increment
+            const res2 = await request(app).post('/api/stats/song/song1');
+            expect(res2.status).toBe(200);
+            expect(res2.body.views).toBe(2);
+        });
+
+        test('returns 404 for non-existent song', async () => {
+            const res = await request(app).post('/api/stats/song/nonexistent');
+            expect(res.status).toBe(404);
+            expect(res.body.error).toBeDefined();
+        });
+
+        test('tracks views for multiple songs independently', async () => {
+            await request(app).post('/api/stats/song/song1');
+            await request(app).post('/api/stats/song/song1');
+            await request(app).post('/api/stats/song/song2');
+
+            const statsRes = await request(app).get('/api/stats');
+            const song1Stats = statsRes.body.topSongs.find(s => s.song.id === 'song1');
+            const song2Stats = statsRes.body.topSongs.find(s => s.song.id === 'song2');
+
+            expect(song1Stats.views).toBe(2);
+            expect(song2Stats.views).toBe(1);
+        });
+    });
+
+    describe('POST /api/stats/list/:id', () => {
+        test('tracks list view and increments count', async () => {
+            const res = await request(app).post('/api/stats/list/list1');
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.views).toBe(1);
+
+            // Second view should increment
+            const res2 = await request(app).post('/api/stats/list/list1');
+            expect(res2.status).toBe(200);
+            expect(res2.body.views).toBe(2);
+        });
+
+        test('returns 404 for non-existent list', async () => {
+            const res = await request(app).post('/api/stats/list/nonexistent');
+            expect(res.status).toBe(404);
+            expect(res.body.error).toBeDefined();
+        });
+    });
+
+    describe('GET /api/stats', () => {
+        test('returns empty stats when no views', async () => {
+            const res = await request(app).get('/api/stats');
+            expect(res.status).toBe(200);
+            expect(res.body.totalSongs).toBe(3);
+            expect(res.body.totalLists).toBe(1);
+            expect(res.body.totalSongViews).toBe(0);
+            expect(res.body.totalListViews).toBe(0);
+            expect(res.body.topSongs).toEqual([]);
+            expect(res.body.topLists).toEqual([]);
+        });
+
+        test('returns aggregated stats with views', async () => {
+            // Track some views
+            await request(app).post('/api/stats/song/song1');
+            await request(app).post('/api/stats/song/song1');
+            await request(app).post('/api/stats/song/song2');
+            await request(app).post('/api/stats/list/list1');
+
+            const res = await request(app).get('/api/stats');
+            expect(res.status).toBe(200);
+            expect(res.body.totalSongViews).toBe(3);
+            expect(res.body.totalListViews).toBe(1);
+            expect(res.body.topSongs).toHaveLength(2);
+            expect(res.body.topLists).toHaveLength(1);
+        });
+
+        test('returns top songs sorted by views descending', async () => {
+            // Track views in specific order
+            await request(app).post('/api/stats/song/song3');
+            await request(app).post('/api/stats/song/song2');
+            await request(app).post('/api/stats/song/song2');
+            await request(app).post('/api/stats/song/song1');
+            await request(app).post('/api/stats/song/song1');
+            await request(app).post('/api/stats/song/song1');
+
+            const res = await request(app).get('/api/stats');
+            expect(res.status).toBe(200);
+            expect(res.body.topSongs).toHaveLength(3);
+            // song1 (3 views) should be first
+            expect(res.body.topSongs[0].song.id).toBe('song1');
+            expect(res.body.topSongs[0].views).toBe(3);
+            // song2 (2 views) should be second
+            expect(res.body.topSongs[1].song.id).toBe('song2');
+            expect(res.body.topSongs[1].views).toBe(2);
+            // song3 (1 view) should be third
+            expect(res.body.topSongs[2].song.id).toBe('song3');
+            expect(res.body.topSongs[2].views).toBe(1);
+        });
+
+        test('limits top songs to 10', async () => {
+            // Add more songs to test data
+            const testData = {
+                songs: [],
+                lists: [{ id: 'list1', name: 'Test List', songIds: [] }],
+                admin: { password: 'testpass123' }
+            };
+
+            // Create 15 songs
+            for (let i = 1; i <= 15; i++) {
+                testData.songs.push({
+                    id: `song${i}`,
+                    title: `Song ${i}`,
+                    lyrics: `Lyrics ${i}`
+                });
+            }
+            setupTestData(testData);
+
+            // Track views for all 15 songs
+            for (let i = 1; i <= 15; i++) {
+                await request(app).post(`/api/stats/song/song${i}`);
+            }
+
+            const res = await request(app).get('/api/stats');
+            expect(res.status).toBe(200);
+            expect(res.body.topSongs.length).toBeLessThanOrEqual(10);
+        });
+
+        test('excludes deleted songs from top songs', async () => {
+            await request(app).post('/api/stats/song/song1');
+            await request(app).delete('/api/songs/song1');
+
+            const res = await request(app).get('/api/stats');
+            expect(res.status).toBe(200);
+            expect(res.body.topSongs.find(s => s.song.id === 'song1')).toBeUndefined();
+        });
+
+        test('excludes deleted lists from top lists', async () => {
+            await request(app).post('/api/stats/list/list1');
+            await request(app).delete('/api/lists/list1');
+
+            const res = await request(app).get('/api/stats');
+            expect(res.status).toBe(200);
+            expect(res.body.topLists.find(l => l.list.id === 'list1')).toBeUndefined();
         });
     });
 });

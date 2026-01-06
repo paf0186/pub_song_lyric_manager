@@ -85,8 +85,8 @@
             <!-- Songs will be loaded here -->
         </div>
         <div class="empty-state" id="emptyState" style="display: none;">
-            <h3>No songs found</h3>
-            <p>Try a different search term or add songs from the admin panel.</p>
+            <h3 id="emptyStateTitle">No songs found</h3>
+            <p id="emptyStateMessage">Try a different search term or add songs from the admin panel.</p>
         </div>
 
         <!-- QR Code Section -->
@@ -121,6 +121,7 @@
             loadQrCode();
             setupEventListeners();
             showSearchHint();
+            handleHashNavigation();
         });
 
         function setupEventListeners() {
@@ -212,6 +213,18 @@
             if (songsToRender.length === 0) {
                 songList.innerHTML = '';
                 emptyState.style.display = 'block';
+
+                // Show different message based on whether we're searching or viewing all
+                const isSearching = searchInput.value.trim().length > 0;
+                if (isSearching) {
+                    document.getElementById('emptyStateTitle').textContent = 'No matching songs';
+                    document.getElementById('emptyStateMessage').textContent =
+                        `No songs match "${searchInput.value}". Try different keywords or check your spelling.`;
+                } else {
+                    document.getElementById('emptyStateTitle').textContent = 'No songs yet';
+                    document.getElementById('emptyStateMessage').textContent =
+                        'The catalog is empty. Head to the admin panel to add your first song!';
+                }
                 return;
             }
 
@@ -259,17 +272,46 @@
         function toggleCard(id) {
             if (expandedCardId === id) {
                 expandedCardId = null;
+                // Clear hash when collapsing
+                history.replaceState(null, '', window.location.pathname + window.location.search);
             } else {
                 expandedCardId = id;
+                // Update hash when expanding
+                history.replaceState(null, '', `#song-${id}`);
+                // Track song view
+                fetch(`api/stats/song/${id}`, { method: 'POST' }).catch(() => {});
             }
 
             document.querySelectorAll('.song-card').forEach(card => {
                 if (card.dataset.id === expandedCardId) {
                     card.classList.add('expanded');
+                    // Scroll to expanded card
+                    if (expandedCardId) {
+                        setTimeout(() => {
+                            card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        }, 100);
+                    }
                 } else {
                     card.classList.remove('expanded');
                 }
             });
+        }
+
+        function handleHashNavigation() {
+            const hash = window.location.hash;
+            if (hash && hash.startsWith('#song-')) {
+                const songId = hash.substring(6); // Remove '#song-'
+                // Wait for songs to load
+                const checkSongs = setInterval(() => {
+                    if (songs.length > 0) {
+                        clearInterval(checkSongs);
+                        const song = songs.find(s => s.id === songId);
+                        if (song) {
+                            toggleCard(songId);
+                        }
+                    }
+                }, 100);
+            }
         }
 
         async function handleSearch() {

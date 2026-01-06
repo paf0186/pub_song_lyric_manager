@@ -77,6 +77,14 @@
                 </div>
             </div>
         </div>
+        <div style="padding: 0 1rem 0.5rem; text-align: center;">
+            <button class="btn btn-secondary" id="printAllBtn" onclick="printAll()" style="display: none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; display: inline-block; vertical-align: middle; margin-right: 0.5rem;">
+                    <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/>
+                </svg>
+                Print All Songs
+            </button>
+        </div>
     </header>
 
     <!-- Main Content -->
@@ -87,12 +95,26 @@
             <img id="qrCode" src="" alt="QR Code">
         </div>
 
+        <!-- List Statistics -->
+        <div id="listStatsSection" style="margin-bottom: 1rem; padding: 1rem; background: var(--card-bg); border-radius: 8px; box-shadow: var(--shadow); text-align: left; display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);">LIST VIEWS</div>
+                    <div style="font-size: 1.25rem; font-weight: 600; color: var(--primary-color); margin-top: 0.25rem;" id="listViewCount">-</div>
+                </div>
+                <div id="topSongsInList" style="flex: 1; margin-left: 2rem;">
+                    <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem;">TOP SONGS IN THIS LIST</div>
+                    <div id="topSongsInListContent" style="font-size: 0.8125rem;"></div>
+                </div>
+            </div>
+        </div>
+
         <div class="song-list" id="songList">
             <!-- Songs will be loaded here -->
         </div>
         <div class="empty-state" id="emptyState" style="display: none;">
-            <h3>No songs found</h3>
-            <p>This list is empty or no songs match your search.</p>
+            <h3 id="emptyStateTitle">No songs found</h3>
+            <p id="emptyStateMessage">This list is empty or no songs match your search.</p>
         </div>
         <div class="empty-state" id="notFoundState" style="display: none;">
             <h3>List not found</h3>
@@ -136,6 +158,7 @@
             loadMenuLists();
             setupEventListeners();
             showSearchHint();
+            handleHashNavigation();
         });
 
         function setupEventListeners() {
@@ -196,6 +219,9 @@
                 highlightCurrentList();
                 loadQrCode();
                 renderSongs(songs);
+                // Track list view
+                fetch(`api/stats/list/${listId}`, { method: 'POST' }).catch(() => {});
+                loadListStats();
             } catch (error) {
                 console.error('Error loading list:', error);
                 showNotFound();
@@ -209,6 +235,46 @@
                 qrCode.src = data.qrCode;
             } catch (error) {
                 qrSection.style.display = 'none';
+            }
+        }
+
+        async function loadListStats() {
+            try {
+                const response = await fetch('api/stats');
+                const stats = await response.json();
+
+                // Get stats for this specific list
+                const listViews = stats.topLists.find(item => item.list.id === listId)?.views || 0;
+
+                // Get song views for songs in this list
+                const songViewsInList = songs
+                    .map(song => {
+                        const views = stats.topSongs.find(item => item.song.id === song.id)?.views || 0;
+                        return { song, views };
+                    })
+                    .filter(item => item.views > 0)
+                    .sort((a, b) => b.views - a.views)
+                    .slice(0, 3);
+
+                // Only show stats if there's actual usage
+                if (listViews > 0 || songViewsInList.length > 0) {
+                    document.getElementById('listStatsSection').style.display = 'block';
+                    document.getElementById('listViewCount').textContent = listViews;
+
+                    if (songViewsInList.length > 0) {
+                        document.getElementById('topSongsInListContent').innerHTML = songViewsInList
+                            .map(item => `
+                                <div style="display: flex; justify-content: space-between; padding: 0.125rem 0;">
+                                    <span>${escapeHtml(item.song.title)}</span>
+                                    <span style="color: var(--text-secondary); margin-left: 1rem;">${item.views} view${item.views !== 1 ? 's' : ''}</span>
+                                </div>
+                            `).join('');
+                    } else {
+                        document.getElementById('topSongsInList').style.display = 'none';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading list stats:', error);
             }
         }
 
@@ -260,11 +326,28 @@
                 songList.innerHTML = '';
                 emptyState.style.display = 'block';
                 notFoundState.style.display = 'none';
+                document.getElementById('printAllBtn').style.display = 'none';
+
+                // Show different message based on whether we're searching or viewing all
+                const isSearching = searchInput.value.trim().length > 0;
+                if (isSearching) {
+                    document.getElementById('emptyStateTitle').textContent = 'No matching songs';
+                    document.getElementById('emptyStateMessage').textContent =
+                        `No songs in this list match "${searchInput.value}". Try different keywords.`;
+                } else if (songs.length === 0) {
+                    document.getElementById('emptyStateTitle').textContent = 'Empty list';
+                    document.getElementById('emptyStateMessage').textContent =
+                        'This list has no songs yet. Add songs from the admin panel.';
+                }
                 return;
             }
 
             emptyState.style.display = 'none';
             notFoundState.style.display = 'none';
+            // Show print all button when there are songs
+            if (songs.length > 0) {
+                document.getElementById('printAllBtn').style.display = 'inline-block';
+            }
 
             songList.innerHTML = songsToRender.map(song => `
                 <div class="song-card${expandedCardId === song.id ? ' expanded' : ''}" data-id="${song.id}">
@@ -308,17 +391,46 @@
         function toggleCard(id) {
             if (expandedCardId === id) {
                 expandedCardId = null;
+                // Clear hash when collapsing
+                history.replaceState(null, '', window.location.pathname + window.location.search);
             } else {
                 expandedCardId = id;
+                // Update hash when expanding
+                history.replaceState(null, '', `${window.location.pathname}?id=${listId}#song-${id}`);
+                // Track song view
+                fetch(`api/stats/song/${id}`, { method: 'POST' }).catch(() => {});
             }
 
             document.querySelectorAll('.song-card').forEach(card => {
                 if (card.dataset.id === expandedCardId) {
                     card.classList.add('expanded');
+                    // Scroll to expanded card
+                    if (expandedCardId) {
+                        setTimeout(() => {
+                            card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        }, 100);
+                    }
                 } else {
                     card.classList.remove('expanded');
                 }
             });
+        }
+
+        function handleHashNavigation() {
+            const hash = window.location.hash;
+            if (hash && hash.startsWith('#song-')) {
+                const songId = hash.substring(6); // Remove '#song-'
+                // Wait for songs to load
+                const checkSongs = setInterval(() => {
+                    if (songs.length > 0) {
+                        clearInterval(checkSongs);
+                        const song = songs.find(s => s.id === songId);
+                        if (song) {
+                            toggleCard(songId);
+                        }
+                    }
+                }, 100);
+            }
         }
 
         async function handleSearch() {
@@ -452,6 +564,76 @@
             lyricsEl.style.fontSize = `${newSize}px`;
         }
 
+        // Print all songs in the list
+        function printAll() {
+            if (songs.length === 0) return;
+
+            const listName = document.getElementById('pageTitle').textContent;
+            const printWindow = window.open('', '_blank');
+            const sortedSongs = [...songs].sort((a, b) => a.title.localeCompare(b.title));
+
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>${escapeHtml(listName)}</title>
+                    <style>
+                        @page {
+                            size: letter;
+                            margin: 0.75in;
+                        }
+                        body {
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                            font-size: 11pt;
+                            line-height: 1.6;
+                        }
+                        h1 {
+                            font-size: 18pt;
+                            margin-bottom: 0.5in;
+                            text-align: center;
+                            border-bottom: 2px solid #333;
+                            padding-bottom: 0.25in;
+                        }
+                        .song {
+                            page-break-inside: avoid;
+                            margin-bottom: 0.5in;
+                        }
+                        .song-title {
+                            font-size: 14pt;
+                            font-weight: bold;
+                            margin-bottom: 0.15in;
+                        }
+                        .song-lyrics {
+                            white-space: pre-wrap;
+                            font-size: 11pt;
+                            line-height: 1.8;
+                        }
+                        .page-break {
+                            page-break-after: always;
+                        }
+                        @media print {
+                            .no-print { display: none; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1>${escapeHtml(listName)}</h1>
+                    ${sortedSongs.map((song, index) => `
+                        <div class="song${index > 0 && index % 2 === 0 ? ' page-break' : ''}">
+                            <div class="song-title">${escapeHtml(song.title)}</div>
+                            <div class="song-lyrics">${escapeHtml(song.lyrics)}</div>
+                        </div>
+                    `).join('')}
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            setTimeout(() => {
+                printWindow.print();
+            }, 250);
+        }
+
+        window.printAll = printAll;
         window.toggleCard = toggleCard;
         window.printLyrics = printLyrics;
         window.copyLyrics = copyLyrics;

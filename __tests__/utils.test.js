@@ -12,6 +12,7 @@ const {
     checkRateLimit,
     recordFailedAttempt,
     loginAttempts,
+    ensureStats,
     MAX_ATTEMPTS
 } = require('../server');
 
@@ -315,5 +316,67 @@ describe('rate limiting', () => {
 
         expect(checkRateLimit(ip1).allowed).toBe(false);
         expect(checkRateLimit(ip2).allowed).toBe(true);
+    });
+});
+
+describe('ensureStats', () => {
+    test('adds stats structure to data without stats', () => {
+        const data = {
+            songs: [],
+            lists: []
+        };
+        const result = ensureStats(data);
+        expect(result.stats).toBeDefined();
+        expect(result.stats.songViews).toEqual({});
+        expect(result.stats.listViews).toEqual({});
+    });
+
+    test('does not overwrite existing stats', () => {
+        const data = {
+            songs: [],
+            lists: [],
+            stats: {
+                songViews: { song1: 5 },
+                listViews: { list1: 3 }
+            }
+        };
+        const result = ensureStats(data);
+        expect(result.stats.songViews.song1).toBe(5);
+        expect(result.stats.listViews.list1).toBe(3);
+    });
+
+    test('adds missing songViews to existing stats', () => {
+        const data = {
+            songs: [],
+            lists: [],
+            stats: {
+                listViews: { list1: 3 }
+            }
+        };
+        const result = ensureStats(data);
+        expect(result.stats.songViews).toEqual({});
+        expect(result.stats.listViews.list1).toBe(3);
+    });
+
+    test('adds missing listViews to existing stats', () => {
+        const data = {
+            songs: [],
+            lists: [],
+            stats: {
+                songViews: { song1: 5 }
+            }
+        };
+        const result = ensureStats(data);
+        expect(result.stats.songViews.song1).toBe(5);
+        expect(result.stats.listViews).toEqual({});
+    });
+
+    test('returns the same data object (mutates in place)', () => {
+        const data = {
+            songs: [],
+            lists: []
+        };
+        const result = ensureStats(data);
+        expect(result).toBe(data);
     });
 });

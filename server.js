@@ -73,10 +73,27 @@ function ensureDataFile() {
             lists: [],
             admin: {
                 password: 'admin123'  // Simple password - change in production
+            },
+            stats: {
+                songViews: {},
+                listViews: {}
             }
         };
         fs.writeFileSync(DATA_FILE, JSON.stringify(initialData, null, 2));
     }
+}
+
+// Ensure stats structure exists in data
+function ensureStats(data) {
+    if (!data.stats) {
+        data.stats = {
+            songViews: {},
+            listViews: {}
+        };
+    }
+    if (!data.stats.songViews) data.stats.songViews = {};
+    if (!data.stats.listViews) data.stats.listViews = {};
+    return data;
 }
 
 // Read data
@@ -483,6 +500,80 @@ app.get('/api/search', (req, res) => {
     res.json(sortSongs(songs));
 });
 
+// ============ STATS ROUTES ============
+
+// Track song view
+app.post('/api/stats/song/:id', (req, res) => {
+    const data = readData();
+    ensureStats(data);
+
+    const songId = req.params.id;
+    if (!data.songs.find(s => s.id === songId)) {
+        return res.status(404).json({ error: 'Song not found' });
+    }
+
+    if (!data.stats.songViews[songId]) {
+        data.stats.songViews[songId] = 0;
+    }
+    data.stats.songViews[songId]++;
+
+    writeData(data);
+    res.json({ success: true, views: data.stats.songViews[songId] });
+});
+
+// Track list view
+app.post('/api/stats/list/:id', (req, res) => {
+    const data = readData();
+    ensureStats(data);
+
+    const listId = req.params.id;
+    if (!data.lists.find(l => l.id === listId)) {
+        return res.status(404).json({ error: 'List not found' });
+    }
+
+    if (!data.stats.listViews[listId]) {
+        data.stats.listViews[listId] = 0;
+    }
+    data.stats.listViews[listId]++;
+
+    writeData(data);
+    res.json({ success: true, views: data.stats.listViews[listId] });
+});
+
+// Get all stats
+app.get('/api/stats', (req, res) => {
+    const data = readData();
+    ensureStats(data);
+
+    // Get top songs and lists
+    const topSongs = Object.entries(data.stats.songViews)
+        .map(([id, views]) => ({
+            song: data.songs.find(s => s.id === id),
+            views
+        }))
+        .filter(item => item.song)
+        .sort((a, b) => b.views - a.views)
+        .slice(0, 10);
+
+    const topLists = Object.entries(data.stats.listViews)
+        .map(([id, views]) => ({
+            list: data.lists.find(l => l.id === id),
+            views
+        }))
+        .filter(item => item.list)
+        .sort((a, b) => b.views - a.views)
+        .slice(0, 10);
+
+    res.json({
+        totalSongs: data.songs.length,
+        totalLists: data.lists.length,
+        totalSongViews: Object.values(data.stats.songViews).reduce((a, b) => a + b, 0),
+        totalListViews: Object.values(data.stats.listViews).reduce((a, b) => a + b, 0),
+        topSongs,
+        topLists
+    });
+});
+
 // Serve main pages
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -526,6 +617,7 @@ module.exports = {
     readData,
     writeData,
     ensureDataFile,
+    ensureStats,
     // Constants
     DATA_FILE,
     MAX_ATTEMPTS,

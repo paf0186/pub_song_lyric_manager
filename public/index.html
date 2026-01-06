@@ -153,6 +153,29 @@
             <img id="qrCode" src="" alt="QR Code" style="max-width: 120px; height: auto;">
         </div>
 
+        <!-- Usage Statistics -->
+        <div id="statsSection" style="margin-top: 2rem; padding: 1.5rem; background: var(--card-bg); border-radius: 10px; border: var(--card-border); box-shadow: var(--shadow); text-align: left; display: none;">
+            <h3 style="font-size: 0.875rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 1rem;">USAGE STATISTICS</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <div style="font-size: 1.5rem; font-weight: 600; color: var(--primary-color);" id="totalSongViews">-</div>
+                    <div style="font-size: 0.8125rem; color: var(--text-secondary);">Song Views</div>
+                </div>
+                <div>
+                    <div style="font-size: 1.5rem; font-weight: 600; color: var(--primary-color);" id="totalListViews">-</div>
+                    <div style="font-size: 0.8125rem; color: var(--text-secondary);">List Views</div>
+                </div>
+            </div>
+            <div id="topSongs" style="margin-top: 1rem;">
+                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem;">TOP SONGS</div>
+                <div id="topSongsList" style="font-size: 0.8125rem; color: var(--text-primary);"></div>
+            </div>
+            <div id="topLists" style="margin-top: 1rem;">
+                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem;">TOP LISTS</div>
+                <div id="topListsList" style="font-size: 0.8125rem; color: var(--text-primary);"></div>
+            </div>
+        </div>
+
         <div class="admin-footer">
             <a href="admin.html">Admin Panel</a>
         </div>
@@ -168,6 +191,7 @@
             setupMenu();
             loadData();
             loadQrCode();
+            loadStats();
         });
 
         function setupMenu() {
@@ -245,6 +269,50 @@
                 document.getElementById('qrCode').src = data.qrCode;
             } catch (error) {
                 document.getElementById('qrSection').style.display = 'none';
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const response = await fetch('api/stats');
+                const stats = await response.json();
+
+                // Only show stats if there's actual usage
+                if (stats.totalSongViews > 0 || stats.totalListViews > 0) {
+                    document.getElementById('statsSection').style.display = 'block';
+                    document.getElementById('totalSongViews').textContent = stats.totalSongViews;
+                    document.getElementById('totalListViews').textContent = stats.totalListViews;
+
+                    // Show top songs
+                    if (stats.topSongs.length > 0) {
+                        document.getElementById('topSongsList').innerHTML = stats.topSongs
+                            .slice(0, 5)
+                            .map(item => `
+                                <div style="display: flex; justify-content: space-between; padding: 0.25rem 0;">
+                                    <span>${escapeHtml(item.song.title)}</span>
+                                    <span style="color: var(--text-secondary);">${item.views} view${item.views !== 1 ? 's' : ''}</span>
+                                </div>
+                            `).join('');
+                    } else {
+                        document.getElementById('topSongs').style.display = 'none';
+                    }
+
+                    // Show top lists
+                    if (stats.topLists.length > 0) {
+                        document.getElementById('topListsList').innerHTML = stats.topLists
+                            .slice(0, 5)
+                            .map(item => `
+                                <div style="display: flex; justify-content: space-between; padding: 0.25rem 0;">
+                                    <span>${escapeHtml(item.list.name)}</span>
+                                    <span style="color: var(--text-secondary);">${item.views} view${item.views !== 1 ? 's' : ''}</span>
+                                </div>
+                            `).join('');
+                    } else {
+                        document.getElementById('topLists').style.display = 'none';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
             }
         }
     </script>
