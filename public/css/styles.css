@@ -391,7 +391,7 @@ body {
 }
 
 .song-card.expanded .song-lyrics {
-    max-height: 2000px;
+    max-height: 5000px; /* Increased to accommodate longer songs and action buttons */
 }
 
 .lyrics-content {
