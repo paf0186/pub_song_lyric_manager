@@ -409,16 +409,24 @@ function fuzzyMatch(text, query) {
 
     // Each query word should fuzzy match at least one text word
     return queryWords.every(queryWord => {
-        // Allow ~20% character errors (minimum 1)
-        const maxDistance = Math.max(1, Math.floor(queryWord.length * 0.2));
+        // Allow ~15% character errors for fuzzy matching
+        const maxDistance = Math.max(1, Math.floor(queryWord.length * 0.15));
 
         return textWords.some(textWord => {
-            // Check substring containment first
-            if (textWord.includes(queryWord) || queryWord.includes(textWord)) {
+            // Check if text word contains the query (e.g., "paradise" contains "para")
+            if (textWord.includes(queryWord)) {
                 return true;
             }
-            // Then check Levenshtein distance
-            return levenshteinDistance(queryWord, textWord) <= maxDistance;
+
+            // For fuzzy matching, only match words of similar length to avoid
+            // matching very short words (prevents "apple" from matching "a")
+            const lengthDiff = Math.abs(textWord.length - queryWord.length);
+            if (lengthDiff <= 2) {
+                // Check Levenshtein distance for typos
+                return levenshteinDistance(queryWord, textWord) <= maxDistance;
+            }
+
+            return false;
         });
     });
 }
