@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Song Lyrics</title>
+    <title>Minnesota Shanty & Pub Sings</title>
     <link rel="stylesheet" href="/css/styles.css">
     <style>
         .welcome-header {
@@ -90,7 +90,7 @@
     <!-- Side Menu -->
     <div class="menu-overlay" id="menuOverlay"></div>
     <nav class="side-menu" id="sideMenu">
-        <div class="menu-header">Song Lyrics</div>
+        <div class="menu-header">MN Shanty & Pub Sings</div>
         <div class="menu-items" id="menuItems">
             <a href="/" class="menu-item active">Home</a>
             <a href="/catalog.html" class="menu-item">All Songs</a>
@@ -98,7 +98,11 @@
             <!-- Dynamic list items will be inserted here -->
         </div>
         <div class="menu-footer">
-            <a href="/admin.html" class="admin-link">
+            <button class="theme-toggle" id="themeToggle">
+                <span class="theme-toggle-icon">◐</span>
+                <span class="theme-toggle-text">Theme: Auto</span>
+            </button>
+            <a href="/admin.html" class="admin-link" style="margin-top: 0.5rem;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="12" cy="12" r="3"></circle>
                     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
@@ -118,8 +122,8 @@
     </div>
 
     <div class="welcome-container">
-        <h1 class="welcome-title">Song Lyrics</h1>
-        <p class="welcome-subtitle">Browse and sing along</p>
+        <h1 class="welcome-title">Minnesota Shanty & Pub Sings</h1>
+        <p class="welcome-subtitle">Lyrics for singing along</p>
 
         <div class="nav-links">
             <a href="/catalog.html" class="nav-link primary">
@@ -128,9 +132,15 @@
             </a>
 
             <div class="section-title" id="listsSection" style="display: none;">Song Lists</div>
-            <div id="listLinks">
+            <div id="listLinks" style="display: flex; flex-direction: column; gap: 1rem;">
                 <!-- Dynamic list links will be inserted here -->
             </div>
+        </div>
+
+        <!-- QR Code Section -->
+        <div class="qr-section" id="qrSection" style="margin-top: 2rem;">
+            <h3 style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Share this page</h3>
+            <img id="qrCode" src="" alt="QR Code" style="max-width: 120px; height: auto;">
         </div>
 
         <div class="admin-footer">
@@ -147,6 +157,7 @@
         document.addEventListener('DOMContentLoaded', async () => {
             setupMenu();
             loadData();
+            loadQrCode();
         });
 
         function setupMenu() {
@@ -216,6 +227,17 @@
             div.textContent = text;
             return div.innerHTML;
         }
+
+        async function loadQrCode() {
+            try {
+                const response = await fetch('/api/qr/home');
+                const data = await response.json();
+                document.getElementById('qrCode').src = data.qrCode;
+            } catch (error) {
+                document.getElementById('qrSection').style.display = 'none';
+            }
+        }
     </script>
+    <script src="/js/theme.js"></script>
 </body>
 </html>

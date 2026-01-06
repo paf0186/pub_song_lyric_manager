@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>All Songs - Song Lyrics</title>
+    <title>All Songs - MN Shanty & Pub Sings</title>
     <link rel="stylesheet" href="/css/styles.css">
     <style>
         .qr-section {
@@ -29,7 +29,7 @@
     <!-- Side Menu -->
     <div class="menu-overlay" id="menuOverlay"></div>
     <nav class="side-menu" id="sideMenu">
-        <div class="menu-header">Song Lyrics</div>
+        <div class="menu-header">MN Shanty & Pub Sings</div>
         <div class="menu-items" id="menuItems">
             <a href="/" class="menu-item">Home</a>
             <a href="/catalog.html" class="menu-item active">All Songs</a>
@@ -37,7 +37,11 @@
             <!-- Dynamic list items will be inserted here -->
         </div>
         <div class="menu-footer">
-            <a href="/admin.html" class="admin-link">
+            <button class="theme-toggle" id="themeToggle">
+                <span class="theme-toggle-icon">◐</span>
+                <span class="theme-toggle-text">Theme: Auto</span>
+            </button>
+            <a href="/admin.html" class="admin-link" style="margin-top: 0.5rem;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="12" cy="12" r="3"></circle>
                     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
@@ -56,8 +60,11 @@
                 <span></span>
             </button>
             <h1 class="header-title">All Songs</h1>
-            <div class="search-container">
+            <div class="search-container" style="position: relative;">
                 <input type="search" class="search-input" id="searchInput" placeholder="Search lyrics...">
+                <div class="search-hint" id="searchHint" style="display: none;">
+                    Don't know the title? Search with any lyrics!
+                </div>
             </div>
         </div>
     </header>
@@ -96,12 +103,14 @@
         const qrSection = document.getElementById('qrSection');
         const qrCode = document.getElementById('qrCode');
         const toastContainer = document.getElementById('toastContainer');
+        const searchHint = document.getElementById('searchHint');
 
         document.addEventListener('DOMContentLoaded', () => {
             loadSongs();
             loadMenuLists();
             loadQrCode();
             setupEventListeners();
+            showSearchHint();
         });
 
         function setupEventListeners() {
@@ -111,6 +120,27 @@
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') closeMenu();
             });
+        }
+
+        function showSearchHint() {
+            if (localStorage.getItem('searchHintDismissed')) return;
+
+            setTimeout(() => {
+                searchHint.style.display = 'block';
+
+                const dismissHint = () => {
+                    searchHint.classList.add('hiding');
+                    setTimeout(() => {
+                        searchHint.style.display = 'none';
+                    }, 200);
+                    localStorage.setItem('searchHintDismissed', 'true');
+                    document.removeEventListener('click', dismissHint);
+                    document.removeEventListener('keydown', dismissHint);
+                };
+
+                document.addEventListener('click', dismissHint);
+                document.addEventListener('keydown', dismissHint);
+            }, 500);
         }
 
         function toggleMenu() {
@@ -186,7 +216,23 @@
                         </svg>
                     </div>
                     <div class="song-lyrics">
-                        <div class="lyrics-content">${escapeHtml(song.lyrics)}</div>
+                        <div class="lyrics-content">
+                            <div class="lyrics-text">${escapeHtml(song.lyrics)}</div>
+                            <div class="lyrics-actions">
+                                <button class="lyrics-action-btn" onclick="printLyrics('${song.id}', event)">
+                                    <svg viewBox="0 0 24 24" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>
+                                    Print
+                                </button>
+                                <button class="lyrics-action-btn" onclick="copyLyrics('${song.id}', event)">
+                                    <svg viewBox="0 0 24 24" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                    Copy
+                                </button>
+                                <button class="lyrics-action-btn" onclick="shareSong('${song.id}', event)">
+                                    <svg viewBox="0 0 24 24" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>
+                                    Share Link
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `).join('');
@@ -251,7 +297,82 @@
             setTimeout(() => toast.remove(), 3000);
         }
 
+        function getSongById(id) {
+            return songs.find(s => s.id === id);
+        }
+
+        function printLyrics(songId, event) {
+            event.stopPropagation();
+            const song = getSongById(songId);
+            if (!song) return;
+
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>${escapeHtml(song.title)}</title>
+                    <style>
+                        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 2rem; }
+                        h1 { font-size: 1.5rem; margin-bottom: 1.5rem; }
+                        pre { white-space: pre-wrap; font-family: inherit; font-size: 1rem; line-height: 1.8; }
+                    </style>
+                </head>
+                <body>
+                    <h1>${escapeHtml(song.title)}</h1>
+                    <pre>${escapeHtml(song.lyrics)}</pre>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.print();
+        }
+
+        async function copyLyrics(songId, event) {
+            event.stopPropagation();
+            const song = getSongById(songId);
+            if (!song) return;
+
+            const text = `${song.title}\n\n${song.lyrics}`;
+            try {
+                await navigator.clipboard.writeText(text);
+                const btn = event.currentTarget;
+                btn.classList.add('success');
+                btn.innerHTML = `<svg viewBox="0 0 24 24" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Copied!`;
+                setTimeout(() => {
+                    btn.classList.remove('success');
+                    btn.innerHTML = `<svg viewBox="0 0 24 24" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy`;
+                }, 2000);
+            } catch (err) {
+                showToast('Failed to copy', 'error');
+            }
+        }
+
+        async function shareSong(songId, event) {
+            event.stopPropagation();
+            const song = getSongById(songId);
+            if (!song) return;
+
+            const url = `${window.location.origin}/catalog.html#song-${songId}`;
+            try {
+                await navigator.clipboard.writeText(url);
+                const btn = event.currentTarget;
+                btn.classList.add('success');
+                btn.innerHTML = `<svg viewBox="0 0 24 24" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Link Copied!`;
+                setTimeout(() => {
+                    btn.classList.remove('success');
+                    btn.innerHTML = `<svg viewBox="0 0 24 24" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/></svg> Share Link`;
+                }, 2000);
+            } catch (err) {
+                showToast('Failed to copy link', 'error');
+            }
+        }
+
         window.toggleCard = toggleCard;
+        window.printLyrics = printLyrics;
+        window.copyLyrics = copyLyrics;
+        window.shareSong = shareSong;
     </script>
+    <script src="/js/theme.js"></script>
 </body>
 </html>

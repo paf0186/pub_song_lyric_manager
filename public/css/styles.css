@@ -25,9 +25,29 @@
     --card-border: 1px solid var(--border-light);
 }
 
-/* Dark mode */
+/* Dark mode variables */
+:root.dark-mode {
+    --primary-color: #6a9fc0;
+    --primary-dark: #7ab0d0;
+    --primary-light: #2a3a48;
+    --secondary-color: #7a9ab5;
+    --background: #1a2028;
+    --card-bg: #242c36;
+    --text-primary: #e8ecf0;
+    --text-lyrics: #d0d8e0;
+    --text-secondary: #94a3b0;
+    --border-color: #3a4858;
+    --border-light: #324050;
+    --success-color: #5aaa7a;
+    --danger-color: #d06a6a;
+    --shadow: 0 2px 4px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.15);
+    --card-border: 1px solid var(--border-color);
+}
+
+/* Auto dark mode (system preference) - only when no manual preference set */
 @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not(.light-mode):not(.dark-mode) {
         --primary-color: #6a9fc0;
         --primary-dark: #7ab0d0;
         --primary-light: #2a3a48;
@@ -45,6 +65,30 @@
         --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.15);
         --card-border: 1px solid var(--border-color);
     }
+}
+
+/* Theme toggle button */
+.theme-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: var(--card-bg);
+    border: var(--card-border);
+    border-radius: 8px;
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 0.9rem;
+    width: 100%;
+    transition: background 0.2s;
+}
+
+.theme-toggle:hover {
+    background: var(--primary-light);
+}
+
+.theme-toggle-icon {
+    font-size: 1.1rem;
 }
 
 html {
@@ -133,6 +177,59 @@ body {
 
 .search-input:focus {
     border-color: var(--primary-color);
+}
+
+/* Search hint tooltip */
+.search-hint {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--primary-color);
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    white-space: nowrap;
+    box-shadow: var(--shadow-lg);
+    z-index: 200;
+    animation: fadeInHint 0.3s ease-out;
+}
+
+.search-hint::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-bottom-color: var(--primary-color);
+}
+
+@keyframes fadeInHint {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+.search-hint.hiding {
+    animation: fadeOutHint 0.2s ease-in forwards;
+}
+
+@keyframes fadeOutHint {
+    from {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-4px);
+    }
 }
 
 /* Side Menu */
@@ -308,6 +405,75 @@ body {
     background: var(--primary-light);
     margin: 0 -1px -1px -1px;
     border-radius: 0 0 10px 10px;
+}
+
+/* Lyrics action buttons */
+.lyrics-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+    flex-wrap: wrap;
+}
+
+.lyrics-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.lyrics-action-btn:hover {
+    background: var(--background);
+    border-color: var(--primary-color);
+}
+
+.lyrics-action-btn svg {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    fill: none;
+}
+
+.lyrics-action-btn.success {
+    background: var(--success-color);
+    color: white;
+    border-color: var(--success-color);
+}
+
+/* Print styles */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    .print-content, .print-content * {
+        visibility: visible;
+    }
+    .print-content {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        padding: 2rem;
+    }
+    .print-content h1 {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    .print-content pre {
+        white-space: pre-wrap;
+        font-family: inherit;
+        font-size: 1rem;
+        line-height: 1.8;
+    }
 }
 
 /* Empty State */

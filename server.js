@@ -1,11 +1,56 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const QRCode = require('qrcode');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'data', 'data.json');
+
+// Rate limiting for login attempts
+const loginAttempts = new Map();
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_TIME = 15 * 60 * 1000; // 15 minutes
+
+function hashPassword(password, salt) {
+    return crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
+}
+
+function generateSalt() {
+    return crypto.randomBytes(16).toString('hex');
+}
+
+function checkRateLimit(ip) {
+    const now = Date.now();
+    const attempts = loginAttempts.get(ip);
+
+    if (!attempts) return { allowed: true };
+
+    // Clean up old attempts
+    if (now - attempts.firstAttempt > LOCKOUT_TIME) {
+        loginAttempts.delete(ip);
+        return { allowed: true };
+    }
+
+    if (attempts.count >= MAX_ATTEMPTS) {
+        const remaining = Math.ceil((LOCKOUT_TIME - (now - attempts.firstAttempt)) / 1000 / 60);
+        return { allowed: false, remaining };
+    }
+
+    return { allowed: true };
+}
+
+function recordFailedAttempt(ip) {
+    const now = Date.now();
+    const attempts = loginAttempts.get(ip);
+
+    if (!attempts) {
+        loginAttempts.set(ip, { count: 1, firstAttempt: now });
+    } else {
+        attempts.count++;
+    }
+}
 
 // Middleware
 app.use(express.json());
@@ -61,12 +106,42 @@ function generateId() {
 // ============ AUTH ROUTES ============
 
 app.post('/api/auth/login', (req, res) => {
+    const ip = req.ip || req.connection.remoteAddress;
+    const rateCheck = checkRateLimit(ip);
+
+    if (!rateCheck.allowed) {
+        return res.status(429).json({
+            success: false,
+            error: `Too many attempts. Try again in ${rateCheck.remaining} minutes.`
+        });
+    }
+
     const { password } = req.body;
     const data = readData();
 
-    if (password === data.admin.password) {
+    // Support both hashed and plain text passwords for migration
+    let isValid = false;
+    if (data.admin.salt) {
+        // Hashed password
+        const hash = hashPassword(password, data.admin.salt);
+        isValid = hash === data.admin.password;
+    } else {
+        // Plain text password (legacy) - migrate to hashed
+        isValid = password === data.admin.password;
+        if (isValid) {
+            // Migrate to hashed password
+            const salt = generateSalt();
+            data.admin.salt = salt;
+            data.admin.password = hashPassword(password, salt);
+            writeData(data);
+        }
+    }
+
+    if (isValid) {
+        loginAttempts.delete(ip); // Clear failed attempts on success
         res.json({ success: true, token: 'admin-token-' + Date.now() });
     } else {
+        recordFailedAttempt(ip);
         res.status(401).json({ success: false, error: 'Invalid password' });
     }
 });
@@ -240,8 +315,11 @@ app.get('/api/qr/:listId', async (req, res) => {
     const host = req.get('host');
     let url;
 
-    // Special case for catalog page
-    if (req.params.listId === 'catalog') {
+    // Special case for home page
+    if (req.params.listId === 'home') {
+        url = `${protocol}://${host}/`;
+    } else if (req.params.listId === 'catalog') {
+        // Special case for catalog page
         url = `${protocol}://${host}/catalog.html`;
     } else {
         const data = readData();
@@ -271,6 +349,90 @@ app.get('/api/qr/:listId', async (req, res) => {
 
 // ============ SEARCH ROUTE ============
 
+// Normalize whitespace - convert all whitespace (including newlines) to single spaces
+function normalizeWhitespace(text) {
+    return text.replace(/\s+/g, ' ').trim();
+}
+
+// Calculate Levenshtein distance between two strings
+function levenshteinDistance(a, b) {
+    const matrix = [];
+
+    for (let i = 0; i <= b.length; i++) {
+        matrix[i] = [i];
+    }
+    for (let j = 0; j <= a.length; j++) {
+        matrix[0][j] = j;
+    }
+
+    for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+            if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                matrix[i][j] = matrix[i - 1][j - 1];
+            } else {
+                matrix[i][j] = Math.min(
+                    matrix[i - 1][j - 1] + 1, // substitution
+                    matrix[i][j - 1] + 1,     // insertion
+                    matrix[i - 1][j] + 1      // deletion
+                );
+            }
+        }
+    }
+
+    return matrix[b.length][a.length];
+}
+
+// Check if text contains a fuzzy match for the query
+function fuzzyMatch(text, query) {
+    const normalizedText = normalizeWhitespace(text).toLowerCase();
+    const normalizedQuery = normalizeWhitespace(query).toLowerCase();
+
+    // First check for exact substring match
+    if (normalizedText.includes(normalizedQuery)) {
+        return true;
+    }
+
+    // For short queries (1-2 chars), require exact match
+    if (normalizedQuery.length <= 2) {
+        return false;
+    }
+
+    // Split query into words for multi-word fuzzy matching
+    const queryWords = normalizedQuery.split(' ').filter(w => w.length > 0);
+    const textWords = normalizedText.split(' ').filter(w => w.length > 0);
+
+    // Each query word should fuzzy match at least one text word
+    return queryWords.every(queryWord => {
+        // Allow ~20% character errors (minimum 1)
+        const maxDistance = Math.max(1, Math.floor(queryWord.length * 0.2));
+
+        return textWords.some(textWord => {
+            // Check substring containment first
+            if (textWord.includes(queryWord) || queryWord.includes(textWord)) {
+                return true;
+            }
+            // Then check Levenshtein distance
+            return levenshteinDistance(queryWord, textWord) <= maxDistance;
+        });
+    });
+}
+
+// Check for exact match (used when query is in quotes)
+function exactMatch(text, query) {
+    const normalizedText = normalizeWhitespace(text).toLowerCase();
+    const normalizedQuery = normalizeWhitespace(query).toLowerCase();
+    return normalizedText.includes(normalizedQuery);
+}
+
+// Parse search query - detect quoted exact searches
+function parseSearchQuery(query) {
+    const exactMatch = query.match(/^"(.+)"$/);
+    if (exactMatch) {
+        return { type: 'exact', term: exactMatch[1] };
+    }
+    return { type: 'fuzzy', term: query };
+}
+
 app.get('/api/search', (req, res) => {
     const { q, listId } = req.query;
     const data = readData();
@@ -287,11 +449,21 @@ app.get('/api/search', (req, res) => {
 
     // Search filter
     if (q) {
-        const searchTerm = q.toLowerCase();
-        songs = songs.filter(s =>
-            s.title.toLowerCase().includes(searchTerm) ||
-            s.lyrics.toLowerCase().includes(searchTerm)
-        );
+        const { type, term } = parseSearchQuery(q);
+
+        if (type === 'exact') {
+            // Exact search (quoted) - handles newlines via normalization
+            songs = songs.filter(s =>
+                exactMatch(s.title, term) ||
+                exactMatch(s.lyrics, term)
+            );
+        } else {
+            // Fuzzy search (default)
+            songs = songs.filter(s =>
+                fuzzyMatch(s.title, term) ||
+                fuzzyMatch(s.lyrics, term)
+            );
+        }
     }
 
     res.json(sortSongs(songs));
@@ -310,9 +482,38 @@ app.get('/list', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'list.html'));
 });
 
-// Start server
-app.listen(PORT, () => {
-    ensureDataFile();
-    console.log(`Server running at http://localhost:${PORT}`);
-    console.log(`Admin panel: http://localhost:${PORT}/admin`);
-});
+// Start server only if not in test mode
+if (process.env.NODE_ENV !== 'test') {
+    app.listen(PORT, () => {
+        ensureDataFile();
+        console.log(`Server running at http://localhost:${PORT}`);
+        console.log(`Admin panel: http://localhost:${PORT}/admin`);
+    });
+}
+
+// Export for testing
+module.exports = {
+    app,
+    // Utility functions
+    normalizeWhitespace,
+    levenshteinDistance,
+    fuzzyMatch,
+    exactMatch,
+    parseSearchQuery,
+    librarySortKey,
+    sortSongs,
+    generateId,
+    hashPassword,
+    generateSalt,
+    checkRateLimit,
+    recordFailedAttempt,
+    loginAttempts,
+    // Data functions
+    readData,
+    writeData,
+    ensureDataFile,
+    // Constants
+    DATA_FILE,
+    MAX_ATTEMPTS,
+    LOCKOUT_TIME
+};
