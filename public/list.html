@@ -69,21 +69,27 @@
                 <span></span>
                 <span></span>
             </button>
-            <h1 class="header-title" id="pageTitle">Song List</h1>
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 0;">
+                <h1 class="header-title" id="pageTitle" style="margin: 0; flex-shrink: 0;">Song List</h1>
+                <button id="printAllBtn" onclick="printAll()" style="display: none; background: none; border: none; padding: 0.375rem 0.75rem; color: var(--text-secondary); cursor: pointer; font-size: 0.8125rem; white-space: nowrap; border-radius: 4px; transition: background-color 0.2s, color 0.2s;" onmouseover="this.style.backgroundColor='var(--hover-bg)'; this.style.color='var(--text-primary)';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--text-secondary)';" title="Print all songs in this list">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle; margin-right: 0.375rem;">
+                        <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/>
+                    </svg>
+                    Print All
+                </button>
+                <button id="downloadAllBtn" onclick="downloadAll()" style="display: none; background: none; border: none; padding: 0.375rem 0.75rem; color: var(--text-secondary); cursor: pointer; font-size: 0.8125rem; white-space: nowrap; border-radius: 4px; transition: background-color 0.2s, color 0.2s;" onmouseover="this.style.backgroundColor='var(--hover-bg)'; this.style.color='var(--text-primary)';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--text-secondary)';" title="Download all songs as text file">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle; margin-right: 0.375rem;">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                    </svg>
+                    Download All
+                </button>
+            </div>
             <div class="search-container" style="position: relative;">
                 <input type="search" class="search-input" id="searchInput" placeholder="Search lyrics...">
                 <div class="search-hint" id="searchHint" style="display: none;">
                     Don't know the title? Search with any lyrics!
                 </div>
             </div>
-        </div>
-        <div style="padding: 0 1rem 0.5rem; text-align: center;">
-            <button class="btn btn-secondary" id="printAllBtn" onclick="printAll()" style="display: none;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; display: inline-block; vertical-align: middle; margin-right: 0.5rem;">
-                    <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/>
-                </svg>
-                Print All Songs
-            </button>
         </div>
     </header>
 
@@ -327,6 +333,7 @@
                 emptyState.style.display = 'block';
                 notFoundState.style.display = 'none';
                 document.getElementById('printAllBtn').style.display = 'none';
+                document.getElementById('downloadAllBtn').style.display = 'none';
 
                 // Show different message based on whether we're searching or viewing all
                 const isSearching = searchInput.value.trim().length > 0;
@@ -344,9 +351,10 @@
 
             emptyState.style.display = 'none';
             notFoundState.style.display = 'none';
-            // Show print all button when there are songs
+            // Show print all and download all buttons when there are songs
             if (songs.length > 0) {
                 document.getElementById('printAllBtn').style.display = 'inline-block';
+                document.getElementById('downloadAllBtn').style.display = 'inline-block';
             }
 
             songList.innerHTML = songsToRender.map(song => `
@@ -372,6 +380,10 @@
                                 <button class="lyrics-action-btn" onclick="printLyrics('${song.id}', event)">
                                     <svg viewBox="0 0 24 24" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>
                                     <span class="btn-text">Print</span>
+                                </button>
+                                <button class="lyrics-action-btn" onclick="downloadLyrics('${song.id}', event)">
+                                    <svg viewBox="0 0 24 24" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                                    <span class="btn-text">Download</span>
                                 </button>
                                 <button class="lyrics-action-btn" onclick="copyLyrics('${song.id}', event)">
                                     <svg viewBox="0 0 24 24" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
@@ -507,6 +519,23 @@
             printWindow.print();
         }
 
+        function downloadLyrics(songId, event) {
+            event.stopPropagation();
+            const song = getSongById(songId);
+            if (!song) return;
+
+            const text = `${song.title}\n\n${song.lyrics}`;
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${song.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
         async function copyLyrics(songId, event) {
             event.stopPropagation();
             const song = getSongById(songId);
@@ -633,9 +662,36 @@
             }, 250);
         }
 
+        function downloadAll() {
+            if (songs.length === 0) return;
+
+            const listName = document.getElementById('pageTitle').textContent;
+            const sortedSongs = [...songs].sort((a, b) => a.title.localeCompare(b.title));
+
+            let text = `${listName}\n${'='.repeat(listName.length)}\n\n`;
+            sortedSongs.forEach((song, index) => {
+                if (index > 0) {
+                    text += '\n\n---\n\n';
+                }
+                text += `${song.title}\n\n${song.lyrics}`;
+            });
+
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${listName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
         window.printAll = printAll;
+        window.downloadAll = downloadAll;
         window.toggleCard = toggleCard;
         window.printLyrics = printLyrics;
+        window.downloadLyrics = downloadLyrics;
         window.copyLyrics = copyLyrics;
         window.shareSong = shareSong;
         window.changeFontSize = changeFontSize;
