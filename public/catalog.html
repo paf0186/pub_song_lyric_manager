@@ -60,8 +60,11 @@
                 <span></span>
             </button>
             <h1 class="header-title">All Songs</h1>
-            <div class="search-container">
+            <div class="search-container" style="position: relative;">
                 <input type="search" class="search-input" id="searchInput" placeholder="Search lyrics...">
+                <div class="search-hint" id="searchHint" style="display: none;">
+                    Don't know the title? Search with any lyrics!
+                </div>
             </div>
         </div>
     </header>
@@ -100,12 +103,14 @@
         const qrSection = document.getElementById('qrSection');
         const qrCode = document.getElementById('qrCode');
         const toastContainer = document.getElementById('toastContainer');
+        const searchHint = document.getElementById('searchHint');
 
         document.addEventListener('DOMContentLoaded', () => {
             loadSongs();
             loadMenuLists();
             loadQrCode();
             setupEventListeners();
+            showSearchHint();
         });
 
         function setupEventListeners() {
@@ -115,6 +120,27 @@
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') closeMenu();
             });
+        }
+
+        function showSearchHint() {
+            if (localStorage.getItem('searchHintDismissed')) return;
+
+            setTimeout(() => {
+                searchHint.style.display = 'block';
+
+                const dismissHint = () => {
+                    searchHint.classList.add('hiding');
+                    setTimeout(() => {
+                        searchHint.style.display = 'none';
+                    }, 200);
+                    localStorage.setItem('searchHintDismissed', 'true');
+                    document.removeEventListener('click', dismissHint);
+                    document.removeEventListener('keydown', dismissHint);
+                };
+
+                document.addEventListener('click', dismissHint);
+                document.addEventListener('keydown', dismissHint);
+            }, 500);
         }
 
         function toggleMenu() {
