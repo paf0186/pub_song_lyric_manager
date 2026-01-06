@@ -1,6 +1,5 @@
 // Admin page JavaScript
 
-let isLoggedIn = false;
 let songs = [];
 let lists = [];
 let editingListId = null;
@@ -35,7 +34,6 @@ const editSongForm = document.getElementById('editSongForm');
 const listFormTitle = document.getElementById('listFormTitle');
 const listSubmitBtn = document.getElementById('listSubmitBtn');
 const cancelEditBtn = document.getElementById('cancelEditBtn');
-const editListId = document.getElementById('editListId');
 const listName = document.getElementById('listName');
 
 // Initialize
@@ -119,7 +117,6 @@ function handleLogout() {
 
 // Show admin panel
 function showAdminPanel() {
-    isLoggedIn = true;
     loginScreen.style.display = 'none';
     adminPanel.style.display = 'block';
     loadSongs();
