@@ -17,6 +17,10 @@
             </div>
             <button type="submit" class="btn btn-primary btn-block">Login</button>
         </form>
+        <button class="theme-toggle" id="themeToggle" style="margin-top: 1.5rem;">
+            <span class="theme-toggle-icon">◐</span>
+            <span class="theme-toggle-text">Theme: Auto</span>
+        </button>
     </div>
 
     <!-- Admin Panel (hidden until login) -->
@@ -31,7 +35,10 @@
                     Back
                 </a>
                 <h1 class="header-title">Admin Panel</h1>
-                <button class="btn btn-secondary btn-small" id="logoutBtn">Logout</button>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn btn-secondary btn-small" id="themeToggleBtn" title="Toggle theme">◐</button>
+                    <button class="btn btn-secondary btn-small" id="logoutBtn">Logout</button>
+                </div>
             </div>
         </header>
 
@@ -143,5 +150,23 @@
     <div class="toast-container" id="toastContainer"></div>
 
     <script src="/js/admin.js"></script>
+    <script src="/js/theme.js"></script>
+    <script>
+        // Hook up admin theme toggle button
+        const themeBtn = document.getElementById('themeToggleBtn');
+        if (themeBtn) {
+            function updateAdminThemeBtn() {
+                const pref = window.themeToggle.getPreference();
+                if (pref === 'auto') themeBtn.textContent = '◐';
+                else if (pref === 'light') themeBtn.textContent = '☀';
+                else themeBtn.textContent = '☾';
+            }
+            themeBtn.addEventListener('click', () => {
+                window.themeToggle.cycle();
+                updateAdminThemeBtn();
+            });
+            updateAdminThemeBtn();
+        }
+    </script>
 </body>
 </html>
