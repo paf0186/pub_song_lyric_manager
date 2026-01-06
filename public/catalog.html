@@ -281,7 +281,7 @@
             }
 
             try {
-                const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+                const response = await fetch(`api/search?q=${encodeURIComponent(query)}`);
                 const results = await response.json();
                 renderSongs(results);
             } catch (error) {

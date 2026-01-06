@@ -29,11 +29,15 @@
     {
       "id": "carolsing1",
       "name": "Carol Sing",
-      "songIds": ["chariots1", "shepherds1"],
+      "songIds": [
+        "chariots1",
+        "shepherds1"
+      ],
       "createdAt": "2024-01-01T00:00:00.000Z"
     }
   ],
   "admin": {
-    "password": "admin123"
+    "password": "aea494e421713fcff84dee479aa9c9b11a180f0f944654598662998fd714f282583ab7eaf9fcb087a7282557bad45b7ae191101c2ae66d68716044dcdd8ecad5",
+    "salt": "d12c0412ffbd6cff3d13ecce7c6a247a"
   }
 }
