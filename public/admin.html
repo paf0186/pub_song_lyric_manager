@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Song Lyrics</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <!-- Login Screen -->
+    <div class="login-container" id="loginScreen">
+        <h2>Admin Login</h2>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Enter admin password" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Login</button>
+        </form>
+    </div>
+
+    <!-- Admin Panel (hidden until login) -->
+    <div class="admin-panel" id="adminPanel" style="display: none;">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <a href="/" class="btn btn-secondary btn-small">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg>
+                    Back
+                </a>
+                <h1 class="header-title">Admin Panel</h1>
+                <button class="btn btn-secondary btn-small" id="logoutBtn">Logout</button>
+            </div>
+        </header>
+
+        <!-- Admin Content -->
+        <div class="admin-container">
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab active" data-tab="songs">Songs</button>
+                <button class="tab" data-tab="lists">Song Lists</button>
+            </div>
+
+            <!-- Songs Tab -->
+            <div class="tab-content active" id="songs-tab">
+                <!-- Add Song Form -->
+                <div class="admin-section">
+                    <h2>Add New Song</h2>
+                    <form id="addSongForm">
+                        <div class="form-group">
+                            <label for="songTitle">Title</label>
+                            <input type="text" id="songTitle" placeholder="Song title" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="songLyrics">Lyrics</label>
+                            <textarea id="songLyrics" placeholder="Enter lyrics here..." required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Add Song</button>
+                    </form>
+                </div>
+
+                <!-- Existing Songs -->
+                <div class="admin-section">
+                    <h2>Manage Songs</h2>
+                    <div class="admin-song-list" id="songsList">
+                        <!-- Songs will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lists Tab -->
+            <div class="tab-content" id="lists-tab">
+                <!-- Create List Form -->
+                <div class="admin-section">
+                    <h2 id="listFormTitle">Create New List</h2>
+                    <form id="createListForm">
+                        <input type="hidden" id="editListId">
+                        <div class="form-group">
+                            <label for="listName">List Name</label>
+                            <input type="text" id="listName" placeholder="e.g., Christmas Carols" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Select Songs</label>
+                            <div class="admin-song-list" id="songCheckboxes">
+                                <!-- Song checkboxes will be loaded here -->
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button type="submit" class="btn btn-primary" id="listSubmitBtn">Create List</button>
+                            <button type="button" class="btn btn-secondary" id="cancelEditBtn" style="display: none;">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Existing Lists -->
+                <div class="admin-section">
+                    <h2>Manage Lists</h2>
+                    <div id="listsContainer">
+                        <!-- Lists will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Code Modal -->
+    <div class="modal-overlay" id="qrModal">
+        <div class="modal">
+            <h3 id="qrListName">QR Code</h3>
+            <div class="qr-code-container">
+                <img id="qrCodeImg" src="" alt="QR Code">
+            </div>
+            <p class="qr-url" id="qrUrl"></p>
+            <button class="btn btn-secondary" onclick="closeQrModal()">Close</button>
+        </div>
+    </div>
+
+    <!-- Edit Song Modal -->
+    <div class="modal-overlay" id="editSongModal">
+        <div class="modal">
+            <h3>Edit Song</h3>
+            <form id="editSongForm">
+                <input type="hidden" id="editSongId">
+                <div class="form-group">
+                    <label for="editSongTitle">Title</label>
+                    <input type="text" id="editSongTitle" required>
+                </div>
+                <div class="form-group">
+                    <label for="editSongLyrics">Lyrics</label>
+                    <textarea id="editSongLyrics" required></textarea>
+                </div>
+                <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeEditSongModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="/js/admin.js"></script>
+</body>
+</html>
