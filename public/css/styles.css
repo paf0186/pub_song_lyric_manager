@@ -395,13 +395,12 @@ body {
 }
 
 .lyrics-content {
-    padding: 0 1rem 1rem;
+    padding: 0.5rem 1rem 0.5rem;
     white-space: pre-wrap;
     font-size: 0.9375rem;
     line-height: 1.75;
     color: var(--text-lyrics);
     border-top: 1px solid var(--border-light);
-    padding-top: 1rem;
     background: var(--primary-light);
     margin: 0 -1px -1px -1px;
     border-radius: 0 0 10px 10px;
@@ -448,8 +447,8 @@ body {
 .lyrics-actions {
     display: flex;
     gap: 0.5rem;
-    margin-top: 1rem;
-    padding-top: 1rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
     border-top: 1px solid var(--border-color);
     flex-wrap: wrap;
 }
