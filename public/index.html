@@ -6,10 +6,21 @@
     <title>Song Lyrics</title>
     <link rel="stylesheet" href="/css/styles.css">
     <style>
+        .welcome-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.75rem 1rem;
+            position: relative;
+        }
+        .welcome-header .menu-btn {
+            position: absolute;
+            left: 1rem;
+        }
         .welcome-container {
             max-width: 500px;
             margin: 0 auto;
-            padding: 2rem 1rem;
+            padding: 1.5rem 1rem 2rem;
             text-align: center;
         }
         .welcome-title {
@@ -29,7 +40,8 @@
             display: block;
             padding: 1rem 1.5rem;
             background: var(--card-bg);
-            border-radius: 8px;
+            border-radius: 10px;
+            border: var(--card-border);
             box-shadow: var(--shadow);
             text-decoration: none;
             color: var(--text-primary);
@@ -43,6 +55,7 @@
         .nav-link.primary {
             background: var(--primary-color);
             color: white;
+            border-color: var(--primary-dark);
         }
         .nav-link .link-meta {
             font-size: 0.8125rem;
@@ -74,6 +87,36 @@
     </style>
 </head>
 <body>
+    <!-- Side Menu -->
+    <div class="menu-overlay" id="menuOverlay"></div>
+    <nav class="side-menu" id="sideMenu">
+        <div class="menu-header">Song Lyrics</div>
+        <div class="menu-items" id="menuItems">
+            <a href="/" class="menu-item active">Home</a>
+            <a href="/catalog.html" class="menu-item">All Songs</a>
+            <div class="menu-section-title">Song Lists</div>
+            <!-- Dynamic list items will be inserted here -->
+        </div>
+        <div class="menu-footer">
+            <a href="/admin.html" class="admin-link">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+                Admin Panel
+            </a>
+        </div>
+    </nav>
+
+    <!-- Header with menu button -->
+    <div class="welcome-header">
+        <button class="menu-btn" id="menuBtn" aria-label="Open menu">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+    </div>
+
     <div class="welcome-container">
         <h1 class="welcome-title">Song Lyrics</h1>
         <p class="welcome-subtitle">Browse and sing along</p>
@@ -96,7 +139,35 @@
     </div>
 
     <script>
+        const menuBtn = document.getElementById('menuBtn');
+        const sideMenu = document.getElementById('sideMenu');
+        const menuOverlay = document.getElementById('menuOverlay');
+        const menuItems = document.getElementById('menuItems');
+
         document.addEventListener('DOMContentLoaded', async () => {
+            setupMenu();
+            loadData();
+        });
+
+        function setupMenu() {
+            menuBtn.addEventListener('click', toggleMenu);
+            menuOverlay.addEventListener('click', closeMenu);
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') closeMenu();
+            });
+        }
+
+        function toggleMenu() {
+            sideMenu.classList.toggle('active');
+            menuOverlay.classList.toggle('active');
+        }
+
+        function closeMenu() {
+            sideMenu.classList.remove('active');
+            menuOverlay.classList.remove('active');
+        }
+
+        async function loadData() {
             // Load song count
             try {
                 const songsRes = await fetch('/api/songs');
@@ -120,11 +191,25 @@
                             <div class="link-meta">${list.songIds.length} song${list.songIds.length !== 1 ? 's' : ''}</div>
                         </a>
                     `).join('');
+
+                    // Also add to menu
+                    renderMenuLists(lists);
                 }
             } catch (e) {
                 console.error('Error loading lists:', e);
             }
-        });
+        }
+
+        function renderMenuLists(lists) {
+            const listSection = menuItems.querySelector('.menu-section-title');
+            lists.forEach(list => {
+                const link = document.createElement('a');
+                link.href = `/list.html?id=${list.id}`;
+                link.className = 'menu-item list-link';
+                link.textContent = list.name;
+                listSection.after(link);
+            });
+        }
 
         function escapeHtml(text) {
             const div = document.createElement('div');
