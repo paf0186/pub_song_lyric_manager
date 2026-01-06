@@ -276,19 +276,27 @@
                     </div>
                     <div class="song-lyrics">
                         <div class="lyrics-content">
-                            <div class="lyrics-text">${escapeHtml(song.lyrics)}</div>
+                            <div class="lyrics-controls">
+                                <button class="font-size-btn" onclick="changeFontSize('${song.id}', -1, event)" title="Decrease font size">
+                                    <svg viewBox="0 0 24 24" stroke-width="2"><path d="M5 12h14"/></svg>
+                                </button>
+                                <button class="font-size-btn" onclick="changeFontSize('${song.id}', 1, event)" title="Increase font size">
+                                    <svg viewBox="0 0 24 24" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                                </button>
+                            </div>
+                            <div class="lyrics-text" id="lyrics-${song.id}">${escapeHtml(song.lyrics)}</div>
                             <div class="lyrics-actions">
                                 <button class="lyrics-action-btn" onclick="printLyrics('${song.id}', event)">
                                     <svg viewBox="0 0 24 24" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>
-                                    Print
+                                    <span class="btn-text">Print</span>
                                 </button>
                                 <button class="lyrics-action-btn" onclick="copyLyrics('${song.id}', event)">
                                     <svg viewBox="0 0 24 24" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                                    Copy
+                                    <span class="btn-text">Copy</span>
                                 </button>
                                 <button class="lyrics-action-btn" onclick="shareSong('${song.id}', event)">
                                     <svg viewBox="0 0 24 24" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>
-                                    Share Link
+                                    <span class="btn-text">Share Link</span>
                                 </button>
                             </div>
                         </div>
@@ -429,10 +437,26 @@
             }
         }
 
+        // Font size change function
+        const fontSizes = {};  // Store font sizes for each song
+        function changeFontSize(songId, delta, event) {
+            event.stopPropagation();
+            const lyricsEl = document.getElementById(`lyrics-${songId}`);
+            if (!lyricsEl) return;
+
+            // Get current font size or default
+            const currentSize = fontSizes[songId] || 15; // 0.9375rem = 15px default
+            const newSize = Math.max(12, Math.min(24, currentSize + (delta * 2))); // Min 12px, max 24px
+
+            fontSizes[songId] = newSize;
+            lyricsEl.style.fontSize = `${newSize}px`;
+        }
+
         window.toggleCard = toggleCard;
         window.printLyrics = printLyrics;
         window.copyLyrics = copyLyrics;
         window.shareSong = shareSong;
+        window.changeFontSize = changeFontSize;
     </script>
     <script src="js/theme.js"></script>
 </body>

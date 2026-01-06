@@ -405,6 +405,43 @@ body {
     background: var(--primary-light);
     margin: 0 -1px -1px -1px;
     border-radius: 0 0 10px 10px;
+    position: relative;
+}
+
+/* Font size controls */
+.lyrics-controls {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    display: flex;
+    gap: 0.25rem;
+    z-index: 10;
+}
+
+.font-size-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.font-size-btn:hover {
+    background: var(--background);
+    border-color: var(--primary-color);
+}
+
+.font-size-btn svg {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+    fill: none;
 }
 
 /* Lyrics action buttons */
@@ -447,6 +484,16 @@ body {
     background: var(--success-color);
     color: white;
     border-color: var(--success-color);
+}
+
+/* Hide button text on mobile */
+@media (max-width: 639px) {
+    .lyrics-action-btn .btn-text {
+        display: none;
+    }
+    .lyrics-action-btn {
+        padding: 0.5rem;
+    }
 }
 
 /* Print styles */
