@@ -168,6 +168,50 @@ app.post('/api/auth/login', (req, res) => {
     }
 });
 
+app.post('/api/auth/change-password', (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+        return res.status(400).json({
+            success: false,
+            error: 'Current password and new password are required'
+        });
+    }
+
+    if (newPassword.length < 6) {
+        return res.status(400).json({
+            success: false,
+            error: 'New password must be at least 6 characters'
+        });
+    }
+
+    const data = readData();
+
+    // Validate current password
+    let isValid = false;
+    if (data.admin.salt) {
+        const hash = hashPassword(currentPassword, data.admin.salt);
+        isValid = hash === data.admin.password;
+    } else {
+        isValid = currentPassword === data.admin.password;
+    }
+
+    if (!isValid) {
+        return res.status(401).json({
+            success: false,
+            error: 'Current password is incorrect'
+        });
+    }
+
+    // Set new password with new salt
+    const salt = generateSalt();
+    data.admin.salt = salt;
+    data.admin.password = hashPassword(newPassword, salt);
+    writeData(data);
+
+    res.json({ success: true, message: 'Password changed successfully' });
+});
+
 // ============ SONG ROUTES ============
 
 // Get all songs (sorted)

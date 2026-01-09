@@ -36,6 +36,9 @@ const listSubmitBtn = document.getElementById('listSubmitBtn');
 const cancelEditBtn = document.getElementById('cancelEditBtn');
 const listName = document.getElementById('listName');
 
+// Settings form elements
+const changePasswordForm = document.getElementById('changePasswordForm');
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     // Check if already logged in
@@ -55,6 +58,7 @@ function setupEventListeners() {
     createListForm.addEventListener('submit', handleListSubmit);
     editSongForm.addEventListener('submit', handleEditSong);
     cancelEditBtn.addEventListener('click', cancelEditList);
+    changePasswordForm.addEventListener('submit', handleChangePassword);
 
     // Tab switching
     tabs.forEach(tab => {
@@ -113,6 +117,44 @@ function handleLogout() {
     adminPanel.style.display = 'none';
     document.getElementById('password').value = '';
     showToast('Logged out', 'info');
+}
+
+// Change password
+async function handleChangePassword(e) {
+    e.preventDefault();
+
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+
+    if (newPassword !== confirmPassword) {
+        showToast('New passwords do not match', 'error');
+        return;
+    }
+
+    if (newPassword.length < 6) {
+        showToast('New password must be at least 6 characters', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch('api/auth/change-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ currentPassword, newPassword })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            changePasswordForm.reset();
+            showToast('Password changed successfully', 'success');
+        } else {
+            showToast(data.error || 'Failed to change password', 'error');
+        }
+    } catch (error) {
+        showToast('Failed to change password', 'error');
+    }
 }
 
 // Show admin panel
