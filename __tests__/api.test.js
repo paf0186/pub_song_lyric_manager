@@ -405,6 +405,101 @@ describe('Auth API', () => {
             expect(res.body.success).toBe(true);
         });
     });
+
+    describe('POST /api/auth/change-password', () => {
+        test('changes password successfully with correct current password', async () => {
+            const res = await request(app)
+                .post('/api/auth/change-password')
+                .send({ currentPassword: 'testpass123', newPassword: 'newpass456' });
+
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.message).toBe('Password changed successfully');
+        });
+
+        test('can login with new password after change', async () => {
+            await request(app)
+                .post('/api/auth/change-password')
+                .send({ currentPassword: 'testpass123', newPassword: 'newpass456' });
+
+            loginAttempts.clear();
+            const res = await request(app)
+                .post('/api/auth/login')
+                .send({ password: 'newpass456' });
+
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+        });
+
+        test('cannot login with old password after change', async () => {
+            await request(app)
+                .post('/api/auth/change-password')
+                .send({ currentPassword: 'testpass123', newPassword: 'newpass456' });
+
+            loginAttempts.clear();
+            const res = await request(app)
+                .post('/api/auth/login')
+                .send({ password: 'testpass123' });
+
+            expect(res.status).toBe(401);
+            expect(res.body.success).toBe(false);
+        });
+
+        test('rejects change with incorrect current password', async () => {
+            const res = await request(app)
+                .post('/api/auth/change-password')
+                .send({ currentPassword: 'wrongpassword', newPassword: 'newpass456' });
+
+            expect(res.status).toBe(401);
+            expect(res.body.success).toBe(false);
+            expect(res.body.error).toBe('Current password is incorrect');
+        });
+
+        test('rejects new password shorter than 6 characters', async () => {
+            const res = await request(app)
+                .post('/api/auth/change-password')
+                .send({ currentPassword: 'testpass123', newPassword: 'short' });
+
+            expect(res.status).toBe(400);
+            expect(res.body.success).toBe(false);
+            expect(res.body.error).toBe('New password must be at least 6 characters');
+        });
+
+        test('rejects request without current password', async () => {
+            const res = await request(app)
+                .post('/api/auth/change-password')
+                .send({ newPassword: 'newpass456' });
+
+            expect(res.status).toBe(400);
+            expect(res.body.success).toBe(false);
+        });
+
+        test('rejects request without new password', async () => {
+            const res = await request(app)
+                .post('/api/auth/change-password')
+                .send({ currentPassword: 'testpass123' });
+
+            expect(res.status).toBe(400);
+            expect(res.body.success).toBe(false);
+        });
+
+        test('generates new salt when changing password', async () => {
+            // First get original salt after login migrates to hashed
+            await request(app)
+                .post('/api/auth/login')
+                .send({ password: 'testpass123' });
+            const dataBefore = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+            const originalSalt = dataBefore.admin.salt;
+
+            // Change password
+            await request(app)
+                .post('/api/auth/change-password')
+                .send({ currentPassword: 'testpass123', newPassword: 'newpass456' });
+
+            const dataAfter = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+            expect(dataAfter.admin.salt).not.toBe(originalSalt);
+        });
+    });
 });
 
 describe('Stats API', () => {
