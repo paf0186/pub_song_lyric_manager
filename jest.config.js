@@ -3,6 +3,8 @@ module.exports = {
     setupFiles: ['<rootDir>/__tests__/env.js'],
     setupFilesAfterEnv: ['<rootDir>/__tests__/setup.js'],
     testMatch: ['**/__tests__/**/*.test.js'],
+    // Run tests sequentially to avoid race conditions with shared data file
+    maxWorkers: 1,
     collectCoverageFrom: [
         'server.js',
         '!node_modules/**',
