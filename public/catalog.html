@@ -248,7 +248,7 @@
                                     <svg viewBox="0 0 24 24" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
                                 </button>
                             </div>
-                            <div class="lyrics-text" id="lyrics-${song.id}">${escapeHtml(song.lyrics)}</div>
+                            <div class="lyrics-text" id="lyrics-${song.id}">${formatLyrics(song.lyrics)}</div>
                             <div class="lyrics-actions">
                                 <button class="lyrics-action-btn" onclick="printLyrics('${song.id}', event)">
                                     <svg viewBox="0 0 24 24" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>
@@ -341,6 +341,13 @@
             return div.innerHTML;
         }
 
+        function formatLyrics(text) {
+            // Escape HTML first for security
+            const safe = escapeHtml(text);
+            // Convert *text* to <em>text</em> for italics
+            return safe.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+        }
+
         function debounce(func, wait) {
             let timeout;
             return function executedFunction(...args) {
@@ -384,7 +391,7 @@
                 </head>
                 <body>
                     <h1>${escapeHtml(song.title)}</h1>
-                    <pre>${escapeHtml(song.lyrics)}</pre>
+                    <pre>${formatLyrics(song.lyrics)}</pre>
                 </body>
                 </html>
             `);

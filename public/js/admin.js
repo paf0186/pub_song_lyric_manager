@@ -36,6 +36,12 @@ const listSubmitBtn = document.getElementById('listSubmitBtn');
 const cancelEditBtn = document.getElementById('cancelEditBtn');
 const listName = document.getElementById('listName');
 
+// Custom order elements
+const useCustomOrderCheckbox = document.getElementById('useCustomOrder');
+const customOrderSection = document.getElementById('customOrderSection');
+const songOrderList = document.getElementById('songOrderList');
+let orderedSongIds = []; // Tracks the custom order of selected songs
+
 // Settings form elements
 const changePasswordForm = document.getElementById('changePasswordForm');
 
@@ -59,6 +65,9 @@ function setupEventListeners() {
     editSongForm.addEventListener('submit', handleEditSong);
     cancelEditBtn.addEventListener('click', cancelEditList);
     changePasswordForm.addEventListener('submit', handleChangePassword);
+
+    // Custom order toggle
+    useCustomOrderCheckbox.addEventListener('change', handleCustomOrderToggle);
 
     // Tab switching
     tabs.forEach(tab => {
@@ -215,15 +224,121 @@ function renderSongCheckboxes(selectedIds = []) {
         return;
     }
 
+    // Initialize orderedSongIds with selectedIds in order (for editing) or empty (for new list)
+    orderedSongIds = [...selectedIds];
+
     songCheckboxes.innerHTML = songs.map(song => `
         <div class="admin-song-item">
             <input type="checkbox" id="song-${song.id}" value="${song.id}"
-                ${selectedIds.includes(song.id) ? 'checked' : ''}>
+                ${selectedIds.includes(song.id) ? 'checked' : ''}
+                onchange="handleSongCheckboxChange('${song.id}', this.checked)">
             <label for="song-${song.id}" class="admin-song-info" style="cursor: pointer;">
                 <div class="admin-song-title">${escapeHtml(song.title)}</div>
             </label>
         </div>
     `).join('');
+
+    // Update the order list if custom order is enabled
+    if (useCustomOrderCheckbox.checked) {
+        renderSongOrderList();
+    }
+}
+
+// Handle song checkbox change
+function handleSongCheckboxChange(songId, checked) {
+    if (checked) {
+        // Add to end of order list
+        if (!orderedSongIds.includes(songId)) {
+            orderedSongIds.push(songId);
+        }
+    } else {
+        // Remove from order list
+        orderedSongIds = orderedSongIds.filter(id => id !== songId);
+    }
+
+    // Update the order list if custom order is enabled
+    if (useCustomOrderCheckbox.checked) {
+        renderSongOrderList();
+    }
+}
+
+// Handle custom order toggle
+function handleCustomOrderToggle() {
+    if (useCustomOrderCheckbox.checked) {
+        customOrderSection.style.display = 'block';
+        renderSongOrderList();
+    } else {
+        customOrderSection.style.display = 'none';
+    }
+}
+
+// Render the draggable song order list
+function renderSongOrderList() {
+    if (orderedSongIds.length === 0) {
+        songOrderList.innerHTML = '<p style="color: var(--text-secondary); font-size: 0.875rem;">Select songs above to order them.</p>';
+        return;
+    }
+
+    songOrderList.innerHTML = orderedSongIds.map((songId, index) => {
+        const song = songs.find(s => s.id === songId);
+        if (!song) return '';
+        return `
+            <div class="drag-item" draggable="true" data-id="${songId}">
+                <svg class="drag-handle" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/>
+                    <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+                    <circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/>
+                </svg>
+                <span class="drag-number">${index + 1}</span>
+                <span class="drag-title">${escapeHtml(song.title)}</span>
+            </div>
+        `;
+    }).join('');
+
+    // Setup drag and drop
+    setupDragAndDrop();
+}
+
+// Setup drag and drop functionality
+function setupDragAndDrop() {
+    const items = songOrderList.querySelectorAll('.drag-item');
+    let draggedItem = null;
+
+    items.forEach(item => {
+        item.addEventListener('dragstart', (e) => {
+            draggedItem = item;
+            item.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        });
+
+        item.addEventListener('dragend', () => {
+            item.classList.remove('dragging');
+            draggedItem = null;
+        });
+
+        item.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            if (!draggedItem || draggedItem === item) return;
+
+            const rect = item.getBoundingClientRect();
+            const midY = rect.top + rect.height / 2;
+
+            if (e.clientY < midY) {
+                item.parentNode.insertBefore(draggedItem, item);
+            } else {
+                item.parentNode.insertBefore(draggedItem, item.nextSibling);
+            }
+        });
+
+        item.addEventListener('drop', (e) => {
+            e.preventDefault();
+            // Update orderedSongIds based on new DOM order
+            const newOrder = Array.from(songOrderList.querySelectorAll('.drag-item'))
+                .map(el => el.dataset.id);
+            orderedSongIds = newOrder;
+            renderSongOrderList(); // Re-render to update numbers
+        });
+    });
 }
 
 // Render lists
@@ -344,8 +459,21 @@ async function handleListSubmit(e) {
     e.preventDefault();
 
     const name = listName.value.trim();
-    const checkboxes = songCheckboxes.querySelectorAll('input[type="checkbox"]:checked');
-    const songIds = Array.from(checkboxes).map(cb => cb.value);
+    const useCustomOrder = useCustomOrderCheckbox.checked;
+
+    // Use orderedSongIds if custom order is enabled, otherwise use checkbox order
+    let songIds;
+    if (useCustomOrder) {
+        // Filter orderedSongIds to only include currently checked songs
+        const checkedIds = new Set(
+            Array.from(songCheckboxes.querySelectorAll('input[type="checkbox"]:checked'))
+                .map(cb => cb.value)
+        );
+        songIds = orderedSongIds.filter(id => checkedIds.has(id));
+    } else {
+        const checkboxes = songCheckboxes.querySelectorAll('input[type="checkbox"]:checked');
+        songIds = Array.from(checkboxes).map(cb => cb.value);
+    }
 
     if (songIds.length === 0) {
         showToast('Please select at least one song', 'error');
@@ -359,7 +487,7 @@ async function handleListSubmit(e) {
         const response = await fetch(url, {
             method,
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, songIds })
+            body: JSON.stringify({ name, songIds, useCustomOrder })
         });
 
         if (response.ok) {
@@ -385,6 +513,15 @@ async function editList(id) {
     listName.value = list.name;
     renderSongCheckboxes(list.songIds);
 
+    // Set custom order state
+    useCustomOrderCheckbox.checked = list.useCustomOrder || false;
+    if (list.useCustomOrder) {
+        customOrderSection.style.display = 'block';
+        renderSongOrderList();
+    } else {
+        customOrderSection.style.display = 'none';
+    }
+
     listFormTitle.textContent = 'Edit List';
     listSubmitBtn.textContent = 'Update List';
     cancelEditBtn.style.display = 'inline-flex';
@@ -398,6 +535,12 @@ function cancelEditList() {
     editingListId = null;
     listName.value = '';
     renderSongCheckboxes();
+
+    // Reset custom order state
+    useCustomOrderCheckbox.checked = false;
+    customOrderSection.style.display = 'none';
+    orderedSongIds = [];
+
     listFormTitle.textContent = 'Create New List';
     listSubmitBtn.textContent = 'Create List';
     cancelEditBtn.style.display = 'none';
@@ -472,3 +615,4 @@ window.editList = editList;
 window.deleteList = deleteList;
 window.showQrCode = showQrCode;
 window.closeQrModal = closeQrModal;
+window.handleSongCheckboxChange = handleSongCheckboxChange;

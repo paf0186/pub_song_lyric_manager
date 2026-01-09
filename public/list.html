@@ -33,6 +33,40 @@
             max-width: 120px;
             height: auto;
         }
+        .song-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 1.5rem;
+            height: 1.5rem;
+            padding: 0 0.375rem;
+            margin-right: 0.625rem;
+            background: var(--primary-color);
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        .sort-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            padding: 0.5rem 0;
+            margin-bottom: 0.5rem;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .sort-indicator:hover {
+            color: var(--primary-color);
+        }
+        .sort-indicator svg {
+            width: 14px;
+            height: 14px;
+        }
     </style>
 </head>
 <body>
@@ -101,18 +135,12 @@
             <img id="qrCode" src="" alt="QR Code">
         </div>
 
-        <!-- List Statistics -->
-        <div id="listStatsSection" style="margin-bottom: 1rem; padding: 1rem; background: var(--card-bg); border-radius: 8px; box-shadow: var(--shadow); text-align: left; display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);">LIST VIEWS</div>
-                    <div style="font-size: 1.25rem; font-weight: 600; color: var(--primary-color); margin-top: 0.25rem;" id="listViewCount">-</div>
-                </div>
-                <div id="topSongsInList" style="flex: 1; margin-left: 2rem;">
-                    <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem;">TOP SONGS IN THIS LIST</div>
-                    <div id="topSongsInListContent" style="font-size: 0.8125rem;"></div>
-                </div>
-            </div>
+        <!-- Sort Order Indicator (only shown for numbered lists) -->
+        <div class="sort-indicator" id="sortIndicator" style="display: none;" onclick="toggleSortOrder()" title="Click to toggle sort order">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 6h18M3 12h12M3 18h6"/>
+            </svg>
+            <span id="sortIndicatorText">Numbered order</span>
         </div>
 
         <div class="song-list" id="songList">
@@ -126,6 +154,20 @@
             <h3>List not found</h3>
             <p>This song list doesn't exist. <a href="./">Go home</a></p>
         </div>
+
+        <!-- List Statistics (at bottom) -->
+        <div id="listStatsSection" style="margin-top: 1.5rem; padding: 1rem; background: var(--card-bg); border-radius: 8px; box-shadow: var(--shadow); text-align: left; display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);">LIST VIEWS</div>
+                    <div style="font-size: 1.25rem; font-weight: 600; color: var(--primary-color); margin-top: 0.25rem;" id="listViewCount">-</div>
+                </div>
+                <div id="topSongsInList" style="flex: 1; margin-left: 2rem;">
+                    <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem;">TOP SONGS IN THIS LIST</div>
+                    <div id="topSongsInListContent" style="font-size: 0.8125rem;"></div>
+                </div>
+            </div>
+        </div>
     </main>
 
     <!-- Toast Container -->
@@ -136,6 +178,7 @@
         let listData = null;
         let songs = [];
         let expandedCardId = null;
+        let useNumberedOrder = true; // Track current sort preference for display
 
         const menuBtn = document.getElementById('menuBtn');
         const sideMenu = document.getElementById('sideMenu');
@@ -150,6 +193,7 @@
         const qrCode = document.getElementById('qrCode');
         const toastContainer = document.getElementById('toastContainer');
         const searchHint = document.getElementById('searchHint');
+        const sortIndicator = document.getElementById('sortIndicator');
 
         document.addEventListener('DOMContentLoaded', () => {
             const params = new URLSearchParams(window.location.search);
@@ -221,6 +265,13 @@
 
                 pageTitle.textContent = listData.name;
                 document.title = `${listData.name} - Song Lyrics`;
+
+                // Show sort indicator for numbered lists
+                if (listData.useCustomOrder) {
+                    sortIndicator.style.display = 'flex';
+                } else {
+                    sortIndicator.style.display = 'none';
+                }
 
                 highlightCurrentList();
                 loadQrCode();
@@ -357,10 +408,18 @@
                 document.getElementById('downloadAllBtn').style.display = 'inline-block';
             }
 
-            songList.innerHTML = songsToRender.map(song => `
+            // For numbered lists, show the position from the original song order (only if numbered order is active)
+            const showNumbers = listData && listData.useCustomOrder && useNumberedOrder;
+
+            songList.innerHTML = songsToRender.map(song => {
+                // Get the original position from songs array (1-based)
+                const songNumber = showNumbers ? songs.findIndex(s => s.id === song.id) + 1 : null;
+                const numberBadge = songNumber ? `<span class="song-number">${songNumber}</span>` : '';
+
+                return `
                 <div class="song-card${expandedCardId === song.id ? ' expanded' : ''}" data-id="${song.id}">
                     <div class="song-header" onclick="toggleCard('${song.id}')">
-                        <span class="song-title">${escapeHtml(song.title)}</span>
+                        ${numberBadge}<span class="song-title">${escapeHtml(song.title)}</span>
                         <svg class="expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="6 9 12 15 18 9"></polyline>
                         </svg>
@@ -375,7 +434,7 @@
                                     <svg viewBox="0 0 24 24" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
                                 </button>
                             </div>
-                            <div class="lyrics-text" id="lyrics-${song.id}">${escapeHtml(song.lyrics)}</div>
+                            <div class="lyrics-text" id="lyrics-${song.id}">${formatLyrics(song.lyrics)}</div>
                             <div class="lyrics-actions">
                                 <button class="lyrics-action-btn" onclick="printLyrics('${song.id}', event)">
                                     <svg viewBox="0 0 24 24" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>
@@ -396,8 +455,8 @@
                             </div>
                         </div>
                     </div>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
         }
 
         function toggleCard(id) {
@@ -445,6 +504,24 @@
             }
         }
 
+        function toggleSortOrder() {
+            if (!listData || !listData.useCustomOrder) return;
+
+            useNumberedOrder = !useNumberedOrder;
+
+            // Update indicator text
+            const indicatorText = document.getElementById('sortIndicatorText');
+            indicatorText.textContent = useNumberedOrder ? 'Numbered order' : 'Alphabetical order';
+
+            // Re-render with appropriate order
+            if (useNumberedOrder) {
+                renderSongs(songs);
+            } else {
+                const sortedSongs = [...songs].sort((a, b) => a.title.localeCompare(b.title));
+                renderSongs(sortedSongs);
+            }
+        }
+
         async function handleSearch() {
             const query = searchInput.value.trim();
 
@@ -466,6 +543,13 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        function formatLyrics(text) {
+            // Escape HTML first for security
+            const safe = escapeHtml(text);
+            // Convert *text* to <em>text</em> for italics
+            return safe.replace(/\*([^*]+)\*/g, '<em>$1</em>');
         }
 
         function debounce(func, wait) {
@@ -511,7 +595,7 @@
                 </head>
                 <body>
                     <h1>${escapeHtml(song.title)}</h1>
-                    <pre>${escapeHtml(song.lyrics)}</pre>
+                    <pre>${formatLyrics(song.lyrics)}</pre>
                 </body>
                 </html>
             `);
@@ -650,7 +734,7 @@
                     ${sortedSongs.map((song, index) => `
                         <div class="song${index > 0 && index % 2 === 0 ? ' page-break' : ''}">
                             <div class="song-title">${escapeHtml(song.title)}</div>
-                            <div class="song-lyrics">${escapeHtml(song.lyrics)}</div>
+                            <div class="song-lyrics">${formatLyrics(song.lyrics)}</div>
                         </div>
                     `).join('')}
                 </body>
@@ -690,6 +774,7 @@
         window.printAll = printAll;
         window.downloadAll = downloadAll;
         window.toggleCard = toggleCard;
+        window.toggleSortOrder = toggleSortOrder;
         window.printLyrics = printLyrics;
         window.downloadLyrics = downloadLyrics;
         window.copyLyrics = copyLyrics;

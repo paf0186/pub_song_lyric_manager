@@ -308,14 +308,17 @@ app.get('/api/lists/:id', (req, res) => {
         return res.status(404).json({ error: 'List not found' });
     }
 
-    // Get full song data for the list
+    // Get full song data for the list, preserving songIds order
     const songs = list.songIds
         .map(id => data.songs.find(s => s.id === id))
         .filter(Boolean);
 
+    // Sort alphabetically unless useCustomOrder is true
+    const orderedSongs = list.useCustomOrder ? songs : sortSongs(songs);
+
     res.json({
         ...list,
-        songs: sortSongs(songs)
+        songs: orderedSongs
     });
 });
 
@@ -343,7 +346,7 @@ app.post('/api/lists', (req, res) => {
 
 // Update list
 app.put('/api/lists/:id', (req, res) => {
-    const { name, songIds } = req.body;
+    const { name, songIds, useCustomOrder } = req.body;
     const data = readData();
     const index = data.lists.findIndex(l => l.id === req.params.id);
 
@@ -353,6 +356,7 @@ app.put('/api/lists/:id', (req, res) => {
 
     if (name) data.lists[index].name = name.trim();
     if (songIds !== undefined) data.lists[index].songIds = songIds;
+    if (useCustomOrder !== undefined) data.lists[index].useCustomOrder = useCustomOrder;
     data.lists[index].updatedAt = new Date().toISOString();
 
     writeData(data);
