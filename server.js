@@ -83,7 +83,11 @@ app.set('trust proxy', true);
 
 // Site detection middleware - attaches site config to request
 app.use((req, res, next) => {
-    req.site = getSiteByPath(sites, req.path);
+    // Check X-Forwarded-Prefix header first (set by nginx reverse proxy)
+    // This allows proper site detection when nginx rewrites the path
+    const forwardedPrefix = req.get('x-forwarded-prefix') || '';
+    const pathForSiteDetection = forwardedPrefix || req.path;
+    req.site = getSiteByPath(sites, pathForSiteDetection);
     // In test mode, always use the test data file
     if (process.env.NODE_ENV === 'test') {
         req.dataFile = DEFAULT_DATA_FILE;
