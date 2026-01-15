@@ -372,12 +372,13 @@ async function handleAddSong(e) {
 
     const title = document.getElementById('songTitle').value.trim();
     const lyrics = document.getElementById('songLyrics').value.trim();
+    const url = document.getElementById('songUrl').value.trim() || null;
 
     try {
         const response = await fetch(basePath + '/api/songs', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title, lyrics })
+            body: JSON.stringify({ title, lyrics, url })
         });
 
         if (response.ok) {
@@ -401,6 +402,7 @@ function openEditSong(id) {
     document.getElementById('editSongId').value = song.id;
     document.getElementById('editSongTitle').value = song.title;
     document.getElementById('editSongLyrics').value = song.lyrics;
+    document.getElementById('editSongUrl').value = song.url || '';
     editSongModal.classList.add('active');
 }
 
@@ -416,12 +418,13 @@ async function handleEditSong(e) {
     const id = document.getElementById('editSongId').value;
     const title = document.getElementById('editSongTitle').value.trim();
     const lyrics = document.getElementById('editSongLyrics').value.trim();
+    const url = document.getElementById('editSongUrl').value.trim() || null;
 
     try {
         const response = await fetch(`${basePath}/api/songs/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title, lyrics })
+            body: JSON.stringify({ title, lyrics, url })
         });
 
         if (response.ok) {

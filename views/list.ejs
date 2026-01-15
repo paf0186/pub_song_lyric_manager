@@ -55,6 +55,53 @@
             width: 14px;
             height: 14px;
         }
+        .song-url-section {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            background: var(--primary-light);
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+        .song-url-link {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+            min-width: 0;
+        }
+        .song-url-link svg {
+            flex-shrink: 0;
+            color: var(--primary-color);
+        }
+        .song-url-link a {
+            color: var(--primary-color);
+            text-decoration: none;
+            word-break: break-all;
+            font-size: 0.875rem;
+        }
+        .song-url-link a:hover {
+            text-decoration: underline;
+        }
+        .song-url-qr {
+            width: 64px;
+            height: 64px;
+            flex-shrink: 0;
+            border-radius: 4px;
+            background: white;
+            padding: 2px;
+        }
+        @media (max-width: 480px) {
+            .song-url-section {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .song-url-qr {
+                align-self: center;
+            }
+        }
     </style>
 </head>
 <body>
@@ -407,6 +454,18 @@
                         </svg>
                     </div>
                     <div class="song-lyrics">
+                        ${song.url ? `
+                        <div class="song-url-section">
+                            <div class="song-url-link">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                                </svg>
+                                <a href="${escapeHtml(song.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(song.url)}</a>
+                            </div>
+                            <img class="song-url-qr" src="${basePath}/api/qr/song/${song.id}" alt="QR Code for external link" loading="lazy">
+                        </div>
+                        ` : ''}
                         <div class="lyrics-content">
                             <div class="lyrics-controls">
                                 <button class="font-size-btn" onclick="changeFontSize('${song.id}', -1, event)" title="Decrease font size">

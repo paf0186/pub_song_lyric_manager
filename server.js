@@ -268,7 +268,7 @@ app.get('/api/songs/:id', (req, res) => {
 
 // Add new song
 app.post('/api/songs', (req, res) => {
-    const { title, lyrics } = req.body;
+    const { title, lyrics, url } = req.body;
 
     if (!title || !lyrics) {
         return res.status(400).json({ error: 'Title and lyrics are required' });
@@ -282,6 +282,11 @@ app.post('/api/songs', (req, res) => {
         createdAt: new Date().toISOString()
     };
 
+    // Add optional URL if provided
+    if (url && url.trim()) {
+        newSong.url = url.trim();
+    }
+
     data.songs.push(newSong);
     writeData(data, req.dataFile);
 
@@ -290,7 +295,7 @@ app.post('/api/songs', (req, res) => {
 
 // Update song
 app.put('/api/songs/:id', (req, res) => {
-    const { title, lyrics } = req.body;
+    const { title, lyrics, url } = req.body;
     const data = readData(req.dataFile);
     const index = data.songs.findIndex(s => s.id === req.params.id);
 
@@ -300,6 +305,16 @@ app.put('/api/songs/:id', (req, res) => {
 
     if (title) data.songs[index].title = title.trim();
     if (lyrics) data.songs[index].lyrics = lyrics.trim();
+
+    // Handle URL - can be set, updated, or cleared
+    if (url !== undefined) {
+        if (url && url.trim()) {
+            data.songs[index].url = url.trim();
+        } else {
+            delete data.songs[index].url;
+        }
+    }
+
     data.songs[index].updatedAt = new Date().toISOString();
 
     writeData(data, req.dataFile);
@@ -449,6 +464,34 @@ app.get('/api/qr/:listId', async (req, res) => {
             }
         });
         res.json({ qrCode: qrDataUrl, url });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to generate QR code' });
+    }
+});
+
+// Generate QR code for a song's external URL
+app.get('/api/qr/song/:songId', async (req, res) => {
+    const data = readData(req.dataFile);
+    const song = data.songs.find(s => s.id === req.params.songId);
+
+    if (!song) {
+        return res.status(404).json({ error: 'Song not found' });
+    }
+
+    if (!song.url) {
+        return res.status(404).json({ error: 'Song has no URL' });
+    }
+
+    try {
+        const qrDataUrl = await QRCode.toDataURL(song.url, {
+            width: 200,
+            margin: 1,
+            color: {
+                dark: '#000000',
+                light: '#ffffff'
+            }
+        });
+        res.json({ qrCode: qrDataUrl, url: song.url });
     } catch (err) {
         res.status(500).json({ error: 'Failed to generate QR code' });
     }
