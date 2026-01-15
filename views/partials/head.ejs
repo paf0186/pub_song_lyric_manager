@@ -1,0 +1,24 @@
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <% if (site.favicon) { %>
+    <link rel="icon" href="<%= site.basePath %>/favicon.ico" type="image/x-icon">
+    <% } %>
+    <script>
+        // Store site config for client-side use
+        window.siteConfig = {
+            basePath: '<%= site.basePath %>',
+            name: '<%= site.name %>',
+            shortName: '<%= site.shortName %>',
+            features: <%- JSON.stringify(site.features) %>,
+            labels: <%- JSON.stringify(site.labels) %>
+        };
+
+        // Set base path for assets
+        document.write('<base href="<%= site.basePath || '/' %>">');
+    </script>
+    <link rel="stylesheet" href="<%= site.basePath %>/css/styles.css">
+    <% if (themeCSS) { %>
+    <style id="site-theme">
+        <%- themeCSS %>
+    </style>
+    <% } %>

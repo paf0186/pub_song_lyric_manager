@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head', { site, themeCSS }) %>
+    <title><%= site.labels.allSongs %> - <%= site.shortName %></title>
+    <style>
+        .qr-section {
+            text-align: center;
+            padding: 2rem 1rem;
+            margin-top: 1rem;
+            background: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+        }
+        .qr-section h3 {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+        }
+        .qr-section img {
+            max-width: 150px;
+            height: auto;
+        }
+        .song-url-section {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            background: var(--primary-light);
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+        .song-url-link {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+            min-width: 0;
+        }
+        .song-url-link svg {
+            flex-shrink: 0;
+            color: var(--primary-color);
+        }
+        .song-url-link a {
+            color: var(--primary-color);
+            text-decoration: none;
+            word-break: break-all;
+            font-size: 0.875rem;
+        }
+        .song-url-link a:hover {
+            text-decoration: underline;
+        }
+        .song-url-qr {
+            width: 64px;
+            height: 64px;
+            flex-shrink: 0;
+            border-radius: 4px;
+            background: white;
+            padding: 2px;
+        }
+        @media (max-width: 480px) {
+            .song-url-section {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .song-url-qr {
+                align-self: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <%- include('partials/side-menu', { site, activePage: 'catalog' }) %>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <button class="menu-btn" id="menuBtn" aria-label="Open menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <h1 class="header-title"><%= site.labels.allSongs %></h1>
+            <% if (site.features.search) { %>
+            <div class="search-container" style="position: relative;">
+                <input type="search" class="search-input" id="searchInput" placeholder="<%= site.labels.searchPlaceholder %>">
+                <div class="search-hint" id="searchHint" style="display: none;">
+                    <%= site.labels.searchHint %>
+                </div>
+            </div>
+            <% } %>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="song-list" id="songList">
+            <!-- Songs will be loaded here -->
+        </div>
+        <div class="empty-state" id="emptyState" style="display: none;">
+            <h3 id="emptyStateTitle"><%= site.labels.noSongsFound %></h3>
+            <p id="emptyStateMessage"><%= site.labels.emptyCatalog %></p>
+        </div>
+
+        <% if (site.features.qrCodes) { %>
+        <!-- QR Code Section -->
+        <div class="qr-section" id="qrSection">
+            <h3><%= site.labels.shareThisPage %></h3>
+            <img id="qrCode" src="" alt="QR Code">
+        </div>
+        <% } %>
+    </main>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        let songs = [];
+        let expandedCardId = null;
+        const basePath = window.siteConfig.basePath;
+        const labels = window.siteConfig.labels;
+        const features = window.siteConfig.features;
+
+        const menuBtn = document.getElementById('menuBtn');
+        const sideMenu = document.getElementById('sideMenu');
+        const menuOverlay = document.getElementById('menuOverlay');
+        const menuItems = document.getElementById('menuItems');
+        const searchInput = document.getElementById('searchInput');
+        const songList = document.getElementById('songList');
+        const emptyState = document.getElementById('emptyState');
+        const toastContainer = document.getElementById('toastContainer');
+        <% if (site.features.qrCodes) { %>
+        const qrSection = document.getElementById('qrSection');
+        const qrCode = document.getElementById('qrCode');
+        <% } %>
+        <% if (site.features.search) { %>
+        const searchHint = document.getElementById('searchHint');
+        <% } %>
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSongs();
+            loadMenuLists();
+            <% if (site.features.qrCodes) { %>loadQrCode();<% } %>
+            setupEventListeners();
+            <% if (site.features.search) { %>showSearchHint();<% } %>
+            handleHashNavigation();
+        });
+
+        function setupEventListeners() {
+            menuBtn.addEventListener('click', toggleMenu);
+            menuOverlay.addEventListener('click', closeMenu);
+            <% if (site.features.search) { %>
+            searchInput.addEventListener('input', debounce(handleSearch, 300));
+            <% } %>
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') closeMenu();
+            });
+        }
+
+        <% if (site.features.search) { %>
+        function showSearchHint() {
+            if (localStorage.getItem('searchHintDismissed')) return;
+
+            setTimeout(() => {
+                searchHint.style.display = 'block';
+
+                const dismissHint = () => {
+                    searchHint.classList.add('hiding');
+                    setTimeout(() => {
+                        searchHint.style.display = 'none';
+                    }, 200);
+                    localStorage.setItem('searchHintDismissed', 'true');
+                    document.removeEventListener('click', dismissHint);
+                    document.removeEventListener('keydown', dismissHint);
+                };
+
+                document.addEventListener('click', dismissHint);
+                document.addEventListener('keydown', dismissHint);
+            }, 500);
+        }
+        <% } %>
+
+        function toggleMenu() {
+            sideMenu.classList.toggle('active');
+            menuOverlay.classList.toggle('active');
+        }
+
+        function closeMenu() {
+            sideMenu.classList.remove('active');
+            menuOverlay.classList.remove('active');
+        }
+
+        async function loadSongs() {
+            try {
+                const response = await fetch(basePath + '/api/songs');
+                songs = await response.json();
+                renderSongs(songs);
+            } catch (error) {
+                console.error('Error loading songs:', error);
+                showToast('Failed to load songs', 'error');
+            }
+        }
+
+        async function loadMenuLists() {
+            try {
+                const response = await fetch(basePath + '/api/lists');
+                const lists = await response.json();
+                renderMenuLists(lists);
+            } catch (error) {
+                console.error('Error loading lists:', error);
+            }
+        }
+
+        <% if (site.features.qrCodes) { %>
+        async function loadQrCode() {
+            try {
+                const response = await fetch(basePath + '/api/qr/catalog');
+                const data = await response.json();
+                qrCode.src = data.qrCode;
+            } catch (error) {
+                qrSection.style.display = 'none';
+            }
+        }
+        <% } %>
+
+        function renderMenuLists(lists) {
+            const listSection = menuItems.querySelector('.menu-section-title');
+            const existingItems = menuItems.querySelectorAll('.menu-item.list-link');
+            existingItems.forEach(item => item.remove());
+
+            lists.forEach(list => {
+                const link = document.createElement('a');
+                link.href = `${basePath}/list.html?id=${list.id}`;
+                link.className = 'menu-item list-link';
+                link.textContent = list.name;
+                listSection.after(link);
+            });
+        }
+
+        function renderSongs(songsToRender) {
+            if (songsToRender.length === 0) {
+                songList.innerHTML = '';
+                emptyState.style.display = 'block';
+
+                // Show different message based on whether we're searching or viewing all
+                const isSearching = searchInput && searchInput.value.trim().length > 0;
+                if (isSearching) {
+                    document.getElementById('emptyStateTitle').textContent = 'No matching songs';
+                    document.getElementById('emptyStateMessage').textContent =
+                        `No songs match "${searchInput.value}". Try different keywords or check your spelling.`;
+                } else {
+                    document.getElementById('emptyStateTitle').textContent = 'No songs yet';
+                    document.getElementById('emptyStateMessage').textContent = labels.emptyCatalog;
+                }
+                return;
+            }
+
+            emptyState.style.display = 'none';
+
+            songList.innerHTML = songsToRender.map(song => `
+                <div class="song-card${expandedCardId === song.id ? ' expanded' : ''}" data-id="${song.id}">
+                    <div class="song-header" onclick="toggleCard('${song.id}')">
+                        <span class="song-title">${escapeHtml(song.title)}</span>
+                        <svg class="expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </div>
+                    <div class="song-lyrics">
+                        ${song.url ? `
+                        <div class="song-url-section">
+                            <div class="song-url-link">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                                </svg>
+                                <a href="${escapeHtml(song.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(song.url)}</a>
+                            </div>
+                            <img class="song-url-qr" src="${basePath}/api/qr/song/${song.id}" alt="QR Code for external link" loading="lazy">
+                        </div>
+                        ` : ''}
+                        <div class="lyrics-content">
+                            <div class="lyrics-controls">
+                                <button class="font-size-btn" onclick="changeFontSize('${song.id}', -1, event)" title="Decrease font size">
+                                    <svg viewBox="0 0 24 24" stroke-width="2"><path d="M5 12h14"/></svg>
+                                </button>
+                                <button class="font-size-btn" onclick="changeFontSize('${song.id}', 1, event)" title="Increase font size">
+                                    <svg viewBox="0 0 24 24" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                                </button>
+                            </div>
+                            <div class="lyrics-text" id="lyrics-${song.id}">${formatLyrics(song.lyrics)}</div>
+                            <div class="lyrics-actions">
+                                <% if (site.features.print) { %>
+                                <button class="lyrics-action-btn" onclick="printLyrics('${song.id}', event)">
+                                    <svg viewBox="0 0 24 24" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>
+                                    <span class="btn-text">${labels.print}</span>
+                                </button>
+                                <% } %>
+                                <% if (site.features.download) { %>
+                                <button class="lyrics-action-btn" onclick="downloadLyrics('${song.id}', event)">
+                                    <svg viewBox="0 0 24 24" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                                    <span class="btn-text">${labels.download}</span>
+                                </button>
+                                <% } %>
+                                <button class="lyrics-action-btn" onclick="copyLyrics('${song.id}', event)">
+                                    <svg viewBox="0 0 24 24" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                    <span class="btn-text">${labels.copy}</span>
+                                </button>
+                                <button class="lyrics-action-btn" onclick="shareSong('${song.id}', event)">
+                                    <svg viewBox="0 0 24 24" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>
+                                    <span class="btn-text">${labels.shareLink}</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleCard(id) {
+            if (expandedCardId === id) {
+                expandedCardId = null;
+                history.replaceState(null, '', window.location.pathname + window.location.search);
+            } else {
+                expandedCardId = id;
+                history.replaceState(null, '', `#song-${id}`);
+                // Track song view
+                fetch(`${basePath}/api/stats/song/${id}`, { method: 'POST' }).catch(() => {});
+            }
+
+            document.querySelectorAll('.song-card').forEach(card => {
+                if (card.dataset.id === expandedCardId) {
+                    card.classList.add('expanded');
+                    if (expandedCardId) {
+                        setTimeout(() => {
+                            card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        }, 100);
+                    }
+                } else {
+                    card.classList.remove('expanded');
+                }
+            });
+        }
+
+        function handleHashNavigation() {
+            const hash = window.location.hash;
+            if (hash && hash.startsWith('#song-')) {
+                const songId = hash.substring(6);
+                const checkSongs = setInterval(() => {
+                    if (songs.length > 0) {
+                        clearInterval(checkSongs);
+                        const song = songs.find(s => s.id === songId);
+                        if (song) {
+                            toggleCard(songId);
+                        }
+                    }
+                }, 100);
+            }
+        }
+
+        <% if (site.features.search) { %>
+        async function handleSearch() {
+            const query = searchInput.value.trim();
+
+            if (!query) {
+                renderSongs(songs);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${basePath}/api/search?q=${encodeURIComponent(query)}`);
+                const results = await response.json();
+                renderSongs(results);
+            } catch (error) {
+                console.error('Error searching:', error);
+            }
+        }
+        <% } %>
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatLyrics(text) {
+            const safe = escapeHtml(text);
+            return safe.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            toastContainer.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function getSongById(id) {
+            return songs.find(s => s.id === id);
+        }
+
+        <% if (site.features.print) { %>
+        function printLyrics(songId, event) {
+            event.stopPropagation();
+            const song = getSongById(songId);
+            if (!song) return;
+
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>${escapeHtml(song.title)}</title>
+                    <style>
+                        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 2rem; }
+                        h1 { font-size: 1.5rem; margin-bottom: 1.5rem; }
+                        pre { white-space: pre-wrap; font-family: inherit; font-size: 1rem; line-height: 1.8; }
+                    </style>
+                </head>
+                <body>
+                    <h1>${escapeHtml(song.title)}</h1>
+                    <pre>${formatLyrics(song.lyrics)}</pre>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.print();
+        }
+        <% } %>
+
+        <% if (site.features.download) { %>
+        function downloadLyrics(songId, event) {
+            event.stopPropagation();
+            const song = getSongById(songId);
+            if (!song) return;
+
+            const text = `${song.title}\n\n${song.lyrics}`;
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${song.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        <% } %>
+
+        async function copyLyrics(songId, event) {
+            event.stopPropagation();
+            const song = getSongById(songId);
+            if (!song) return;
+
+            const text = `${song.title}\n\n${song.lyrics}`;
+            try {
+                await navigator.clipboard.writeText(text);
+                const btn = event.currentTarget;
+                btn.classList.add('success');
+                btn.innerHTML = `<svg viewBox="0 0 24 24" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Copied!`;
+                setTimeout(() => {
+                    btn.classList.remove('success');
+                    btn.innerHTML = `<svg viewBox="0 0 24 24" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> ${labels.copy}`;
+                }, 2000);
+            } catch (err) {
+                showToast('Failed to copy', 'error');
+            }
+        }
+
+        async function shareSong(songId, event) {
+            event.stopPropagation();
+            const song = getSongById(songId);
+            if (!song) return;
+
+            const url = window.location.origin + basePath + `/catalog.html#song-${songId}`;
+            try {
+                await navigator.clipboard.writeText(url);
+                const btn = event.currentTarget;
+                btn.classList.add('success');
+                btn.innerHTML = `<svg viewBox="0 0 24 24" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Link Copied!`;
+                setTimeout(() => {
+                    btn.classList.remove('success');
+                    btn.innerHTML = `<svg viewBox="0 0 24 24" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/></svg> ${labels.shareLink}`;
+                }, 2000);
+            } catch (err) {
+                showToast('Failed to copy link', 'error');
+            }
+        }
+
+        // Font size change function
+        const fontSizes = {};
+        function changeFontSize(songId, delta, event) {
+            event.stopPropagation();
+            const lyricsEl = document.getElementById(`lyrics-${songId}`);
+            if (!lyricsEl) return;
+
+            const currentSize = fontSizes[songId] || 15;
+            const newSize = Math.max(12, Math.min(24, currentSize + (delta * 2)));
+
+            fontSizes[songId] = newSize;
+            lyricsEl.style.fontSize = `${newSize}px`;
+        }
+
+        window.toggleCard = toggleCard;
+        <% if (site.features.print) { %>window.printLyrics = printLyrics;<% } %>
+        <% if (site.features.download) { %>window.downloadLyrics = downloadLyrics;<% } %>
+        window.copyLyrics = copyLyrics;
+        window.shareSong = shareSong;
+        window.changeFontSize = changeFontSize;
+    </script>
+    <script src="<%= site.basePath %>/js/theme.js"></script>
+</body>
+</html>

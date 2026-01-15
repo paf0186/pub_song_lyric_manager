@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head', { site, themeCSS }) %>
+    <title><%= site.labels.adminPanel %> - <%= site.shortName %></title>
+    <style>
+        .drag-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            cursor: grab;
+            transition: background-color 0.15s, box-shadow 0.15s;
+        }
+        .drag-item:hover {
+            background: var(--hover-bg);
+        }
+        .drag-item.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+        .drag-item .drag-handle {
+            color: var(--text-secondary);
+            flex-shrink: 0;
+        }
+        .drag-item .drag-number {
+            min-width: 1.5rem;
+            height: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--primary-color);
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        .drag-item .drag-title {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div class="login-container" id="loginScreen">
+        <h2>Admin Login</h2>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Enter admin password" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Login</button>
+        </form>
+        <button class="theme-toggle" id="themeToggle" style="margin-top: 1.5rem;">
+            <span class="theme-toggle-icon">◐</span>
+            <span class="theme-toggle-text">Theme: Auto</span>
+        </button>
+    </div>
+
+    <!-- Admin Panel (hidden until login) -->
+    <div class="admin-panel" id="adminPanel" style="display: none;">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <a href="<%= site.basePath %>/" class="btn btn-secondary btn-small">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg>
+                    Back
+                </a>
+                <h1 class="header-title"><%= site.labels.adminPanel %></h1>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn btn-secondary btn-small" id="themeToggleBtn" title="Toggle theme">◐</button>
+                    <button class="btn btn-secondary btn-small" id="logoutBtn">Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Admin Content -->
+        <div class="admin-container">
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab active" data-tab="songs">Songs</button>
+                <button class="tab" data-tab="lists"><%= site.labels.songLists %></button>
+                <button class="tab" data-tab="password">Change Password</button>
+            </div>
+
+            <!-- Songs Tab -->
+            <div class="tab-content active" id="songs-tab">
+                <!-- Add Song Form -->
+                <div class="admin-section">
+                    <h2>Add New Song</h2>
+                    <form id="addSongForm">
+                        <div class="form-group">
+                            <label for="songTitle">Title</label>
+                            <input type="text" id="songTitle" placeholder="Song title" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="songLyrics">Lyrics</label>
+                            <textarea id="songLyrics" placeholder="Enter lyrics here..." required></textarea>
+                            <small style="color: var(--text-secondary); margin-top: 0.25rem; display: block;">Use *asterisks* for italics</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="songUrl">External URL (optional)</label>
+                            <input type="url" id="songUrl" placeholder="https://example.com/song-info">
+                            <small style="color: var(--text-secondary); margin-top: 0.25rem; display: block;">Link to sheet music, video, or more info - will show as QR code</small>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Add Song</button>
+                    </form>
+                </div>
+
+                <!-- Existing Songs -->
+                <div class="admin-section">
+                    <h2>Manage Songs</h2>
+                    <div class="admin-song-list" id="songsList">
+                        <!-- Songs will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lists Tab -->
+            <div class="tab-content" id="lists-tab">
+                <!-- Create List Form -->
+                <div class="admin-section">
+                    <h2 id="listFormTitle">Create New List</h2>
+                    <form id="createListForm">
+                        <input type="hidden" id="editListId">
+                        <div class="form-group">
+                            <label for="listName">List Name</label>
+                            <input type="text" id="listName" placeholder="e.g., Christmas Carols" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Select Songs</label>
+                            <div class="admin-song-list" id="songCheckboxes">
+                                <!-- Song checkboxes will be loaded here -->
+                            </div>
+                        </div>
+                        <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="useCustomOrder">
+                            <label for="useCustomOrder" style="margin: 0; cursor: pointer;">Use custom order (show numbers on song list)</label>
+                        </div>
+                        <div id="customOrderSection" style="display: none; margin-bottom: 1rem;">
+                            <label style="font-size: 0.875rem; color: var(--text-secondary);">Drag songs to reorder:</label>
+                            <div class="admin-song-list" id="songOrderList" style="margin-top: 0.5rem;">
+                                <!-- Reorderable song list will appear here -->
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button type="submit" class="btn btn-primary" id="listSubmitBtn">Create List</button>
+                            <button type="button" class="btn btn-secondary" id="cancelEditBtn" style="display: none;">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Existing Lists -->
+                <div class="admin-section">
+                    <h2>Manage Lists</h2>
+                    <div id="listsContainer">
+                        <!-- Lists will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Change Password Tab -->
+            <div class="tab-content" id="password-tab">
+                <div class="admin-section">
+                    <h2>Change Password</h2>
+                    <form id="changePasswordForm">
+                        <div class="form-group">
+                            <label for="currentPassword">Current Password</label>
+                            <input type="password" id="currentPassword" placeholder="Enter current password" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="newPassword">New Password</label>
+                            <input type="password" id="newPassword" placeholder="Enter new password (min 6 characters)" required minlength="6">
+                        </div>
+                        <div class="form-group">
+                            <label for="confirmPassword">Confirm New Password</label>
+                            <input type="password" id="confirmPassword" placeholder="Confirm new password" required minlength="6">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Change Password</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Code Modal -->
+    <div class="modal-overlay" id="qrModal">
+        <div class="modal">
+            <h3 id="qrListName">QR Code</h3>
+            <div class="qr-code-container">
+                <img id="qrCodeImg" src="" alt="QR Code">
+            </div>
+            <p class="qr-url" id="qrUrl"></p>
+            <button class="btn btn-secondary" onclick="closeQrModal()">Close</button>
+        </div>
+    </div>
+
+    <!-- Edit Song Modal -->
+    <div class="modal-overlay" id="editSongModal">
+        <div class="modal">
+            <h3>Edit Song</h3>
+            <form id="editSongForm">
+                <input type="hidden" id="editSongId">
+                <div class="form-group">
+                    <label for="editSongTitle">Title</label>
+                    <input type="text" id="editSongTitle" required>
+                </div>
+                <div class="form-group">
+                    <label for="editSongLyrics">Lyrics</label>
+                    <textarea id="editSongLyrics" required></textarea>
+                    <small style="color: var(--text-secondary); margin-top: 0.25rem; display: block;">Use *asterisks* for italics</small>
+                </div>
+                <div class="form-group">
+                    <label for="editSongUrl">External URL (optional)</label>
+                    <input type="url" id="editSongUrl" placeholder="https://example.com/song-info">
+                    <small style="color: var(--text-secondary); margin-top: 0.25rem; display: block;">Link to sheet music, video, or more info - will show as QR code</small>
+                </div>
+                <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeEditSongModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // Pass site config to admin.js
+        window.adminConfig = {
+            basePath: '<%= site.basePath %>'
+        };
+    </script>
+    <script src="<%= site.basePath %>/js/admin.js"></script>
+    <script src="<%= site.basePath %>/js/theme.js"></script>
+    <script>
+        // Hook up admin theme toggle button
+        const themeBtn = document.getElementById('themeToggleBtn');
+        if (themeBtn) {
+            function updateAdminThemeBtn() {
+                const pref = window.themeToggle.getPreference();
+                if (pref === 'auto') themeBtn.textContent = '◐';
+                else if (pref === 'light') themeBtn.textContent = '☀';
+                else themeBtn.textContent = '☾';
+            }
+            themeBtn.addEventListener('click', () => {
+                window.themeToggle.cycle();
+                updateAdminThemeBtn();
+            });
+            updateAdminThemeBtn();
+        }
+    </script>
+</body>
+</html>

@@ -3,12 +3,33 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const QRCode = require('qrcode');
+const { loadSiteConfigs, getSiteByPath, generateThemeCSS } = require('./config/site-loader');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DATA_FILE = process.env.NODE_ENV === 'test'
+
+// Load site configurations
+const sites = loadSiteConfigs();
+
+// Default data file (used for testing or fallback)
+const DEFAULT_DATA_FILE = process.env.NODE_ENV === 'test'
     ? path.join(__dirname, 'data', 'data.test.json')
     : path.join(__dirname, 'data', 'data.json');
+
+// Get data file for a site
+function getDataFile(site) {
+    if (!site || !site.dataFile) {
+        return DEFAULT_DATA_FILE;
+    }
+    return path.join(__dirname, site.dataFile);
+}
+
+// Legacy DATA_FILE for backward compatibility with tests
+const DATA_FILE = DEFAULT_DATA_FILE;
+
+// Set up EJS as view engine
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
 
 // Rate limiting for login attempts
 const loginAttempts = new Map();
@@ -56,18 +77,32 @@ function recordFailedAttempt(ip) {
 
 // Middleware
 app.use(express.json());
-app.use(express.static('public'));
 
 // Trust proxy headers (required for X-Forwarded-Proto, X-Forwarded-Prefix, etc.)
 app.set('trust proxy', true);
 
+// Site detection middleware - attaches site config to request
+app.use((req, res, next) => {
+    req.site = getSiteByPath(sites, req.path);
+    // In test mode, always use the test data file
+    if (process.env.NODE_ENV === 'test') {
+        req.dataFile = DEFAULT_DATA_FILE;
+    } else {
+        req.dataFile = getDataFile(req.site);
+    }
+    next();
+});
+
+// Serve static files (CSS, JS, images)
+app.use(express.static('public'));
+
 // Ensure data directory and file exist
-function ensureDataFile() {
-    const dataDir = path.dirname(DATA_FILE);
+function ensureDataFile(dataFile = DATA_FILE) {
+    const dataDir = path.dirname(dataFile);
     if (!fs.existsSync(dataDir)) {
         fs.mkdirSync(dataDir, { recursive: true });
     }
-    if (!fs.existsSync(DATA_FILE)) {
+    if (!fs.existsSync(dataFile)) {
         const initialData = {
             songs: [],
             lists: [],
@@ -79,7 +114,7 @@ function ensureDataFile() {
                 listViews: {}
             }
         };
-        fs.writeFileSync(DATA_FILE, JSON.stringify(initialData, null, 2));
+        fs.writeFileSync(dataFile, JSON.stringify(initialData, null, 2));
     }
 }
 
@@ -97,15 +132,15 @@ function ensureStats(data) {
 }
 
 // Read data
-function readData() {
-    ensureDataFile();
-    return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+function readData(dataFile = DATA_FILE) {
+    ensureDataFile(dataFile);
+    return JSON.parse(fs.readFileSync(dataFile, 'utf8'));
 }
 
 // Write data
-function writeData(data) {
-    ensureDataFile();
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+function writeData(data, dataFile = DATA_FILE) {
+    ensureDataFile(dataFile);
+    fs.writeFileSync(dataFile, JSON.stringify(data, null, 2));
 }
 
 // Library-style sorting (ignores articles like "The", "A", "An")
@@ -139,7 +174,7 @@ app.post('/api/auth/login', (req, res) => {
     }
 
     const { password } = req.body;
-    const data = readData();
+    const data = readData(req.dataFile);
 
     // Support both hashed and plain text passwords for migration
     let isValid = false;
@@ -155,7 +190,7 @@ app.post('/api/auth/login', (req, res) => {
             const salt = generateSalt();
             data.admin.salt = salt;
             data.admin.password = hashPassword(password, salt);
-            writeData(data);
+            writeData(data, req.dataFile);
         }
     }
 
@@ -185,7 +220,7 @@ app.post('/api/auth/change-password', (req, res) => {
         });
     }
 
-    const data = readData();
+    const data = readData(req.dataFile);
 
     // Validate current password
     let isValid = false;
@@ -207,7 +242,7 @@ app.post('/api/auth/change-password', (req, res) => {
     const salt = generateSalt();
     data.admin.salt = salt;
     data.admin.password = hashPassword(newPassword, salt);
-    writeData(data);
+    writeData(data, req.dataFile);
 
     res.json({ success: true, message: 'Password changed successfully' });
 });
@@ -216,13 +251,13 @@ app.post('/api/auth/change-password', (req, res) => {
 
 // Get all songs (sorted)
 app.get('/api/songs', (req, res) => {
-    const data = readData();
+    const data = readData(req.dataFile);
     res.json(sortSongs(data.songs));
 });
 
 // Get single song
 app.get('/api/songs/:id', (req, res) => {
-    const data = readData();
+    const data = readData(req.dataFile);
     const song = data.songs.find(s => s.id === req.params.id);
     if (song) {
         res.json(song);
@@ -233,13 +268,13 @@ app.get('/api/songs/:id', (req, res) => {
 
 // Add new song
 app.post('/api/songs', (req, res) => {
-    const { title, lyrics } = req.body;
+    const { title, lyrics, url } = req.body;
 
     if (!title || !lyrics) {
         return res.status(400).json({ error: 'Title and lyrics are required' });
     }
 
-    const data = readData();
+    const data = readData(req.dataFile);
     const newSong = {
         id: generateId(),
         title: title.trim(),
@@ -247,16 +282,21 @@ app.post('/api/songs', (req, res) => {
         createdAt: new Date().toISOString()
     };
 
+    // Add optional URL if provided
+    if (url && url.trim()) {
+        newSong.url = url.trim();
+    }
+
     data.songs.push(newSong);
-    writeData(data);
+    writeData(data, req.dataFile);
 
     res.status(201).json(newSong);
 });
 
 // Update song
 app.put('/api/songs/:id', (req, res) => {
-    const { title, lyrics } = req.body;
-    const data = readData();
+    const { title, lyrics, url } = req.body;
+    const data = readData(req.dataFile);
     const index = data.songs.findIndex(s => s.id === req.params.id);
 
     if (index === -1) {
@@ -265,15 +305,25 @@ app.put('/api/songs/:id', (req, res) => {
 
     if (title) data.songs[index].title = title.trim();
     if (lyrics) data.songs[index].lyrics = lyrics.trim();
+
+    // Handle URL - can be set, updated, or cleared
+    if (url !== undefined) {
+        if (url && url.trim()) {
+            data.songs[index].url = url.trim();
+        } else {
+            delete data.songs[index].url;
+        }
+    }
+
     data.songs[index].updatedAt = new Date().toISOString();
 
-    writeData(data);
+    writeData(data, req.dataFile);
     res.json(data.songs[index]);
 });
 
 // Delete song
 app.delete('/api/songs/:id', (req, res) => {
-    const data = readData();
+    const data = readData(req.dataFile);
     const index = data.songs.findIndex(s => s.id === req.params.id);
 
     if (index === -1) {
@@ -286,7 +336,7 @@ app.delete('/api/songs/:id', (req, res) => {
     });
 
     data.songs.splice(index, 1);
-    writeData(data);
+    writeData(data, req.dataFile);
 
     res.json({ success: true });
 });
@@ -295,13 +345,13 @@ app.delete('/api/songs/:id', (req, res) => {
 
 // Get all lists
 app.get('/api/lists', (req, res) => {
-    const data = readData();
+    const data = readData(req.dataFile);
     res.json(data.lists);
 });
 
 // Get single list with songs
 app.get('/api/lists/:id', (req, res) => {
-    const data = readData();
+    const data = readData(req.dataFile);
     const list = data.lists.find(l => l.id === req.params.id);
 
     if (!list) {
@@ -330,7 +380,7 @@ app.post('/api/lists', (req, res) => {
         return res.status(400).json({ error: 'List name is required' });
     }
 
-    const data = readData();
+    const data = readData(req.dataFile);
     const newList = {
         id: generateId(),
         name: name.trim(),
@@ -339,7 +389,7 @@ app.post('/api/lists', (req, res) => {
     };
 
     data.lists.push(newList);
-    writeData(data);
+    writeData(data, req.dataFile);
 
     res.status(201).json(newList);
 });
@@ -347,7 +397,7 @@ app.post('/api/lists', (req, res) => {
 // Update list
 app.put('/api/lists/:id', (req, res) => {
     const { name, songIds, useCustomOrder } = req.body;
-    const data = readData();
+    const data = readData(req.dataFile);
     const index = data.lists.findIndex(l => l.id === req.params.id);
 
     if (index === -1) {
@@ -359,13 +409,13 @@ app.put('/api/lists/:id', (req, res) => {
     if (useCustomOrder !== undefined) data.lists[index].useCustomOrder = useCustomOrder;
     data.lists[index].updatedAt = new Date().toISOString();
 
-    writeData(data);
+    writeData(data, req.dataFile);
     res.json(data.lists[index]);
 });
 
 // Delete list
 app.delete('/api/lists/:id', (req, res) => {
-    const data = readData();
+    const data = readData(req.dataFile);
     const index = data.lists.findIndex(l => l.id === req.params.id);
 
     if (index === -1) {
@@ -373,7 +423,7 @@ app.delete('/api/lists/:id', (req, res) => {
     }
 
     data.lists.splice(index, 1);
-    writeData(data);
+    writeData(data, req.dataFile);
 
     res.json({ success: true });
 });
@@ -383,7 +433,8 @@ app.delete('/api/lists/:id', (req, res) => {
 app.get('/api/qr/:listId', async (req, res) => {
     const protocol = req.protocol;
     const host = req.get('host');
-    const basePath = process.env.BASE_PATH || req.get('x-forwarded-prefix') || '';
+    // Use site basePath, fall back to env or header
+    const basePath = (req.site && req.site.basePath) || process.env.BASE_PATH || req.get('x-forwarded-prefix') || '';
     let url;
 
     // Special case for home page
@@ -393,7 +444,7 @@ app.get('/api/qr/:listId', async (req, res) => {
         // Special case for catalog page
         url = `${protocol}://${host}${basePath}/catalog.html`;
     } else {
-        const data = readData();
+        const data = readData(req.dataFile);
         const list = data.lists.find(l => l.id === req.params.listId);
 
         if (!list) {
@@ -413,6 +464,34 @@ app.get('/api/qr/:listId', async (req, res) => {
             }
         });
         res.json({ qrCode: qrDataUrl, url });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to generate QR code' });
+    }
+});
+
+// Generate QR code for a song's external URL
+app.get('/api/qr/song/:songId', async (req, res) => {
+    const data = readData(req.dataFile);
+    const song = data.songs.find(s => s.id === req.params.songId);
+
+    if (!song) {
+        return res.status(404).json({ error: 'Song not found' });
+    }
+
+    if (!song.url) {
+        return res.status(404).json({ error: 'Song has no URL' });
+    }
+
+    try {
+        const qrDataUrl = await QRCode.toDataURL(song.url, {
+            width: 200,
+            margin: 1,
+            color: {
+                dark: '#000000',
+                light: '#ffffff'
+            }
+        });
+        res.json({ qrCode: qrDataUrl, url: song.url });
     } catch (err) {
         res.status(500).json({ error: 'Failed to generate QR code' });
     }
@@ -514,7 +593,7 @@ function parseSearchQuery(query) {
 
 app.get('/api/search', (req, res) => {
     const { q, listId } = req.query;
-    const data = readData();
+    const data = readData(req.dataFile);
 
     let songs = data.songs;
 
@@ -552,7 +631,7 @@ app.get('/api/search', (req, res) => {
 
 // Track song view
 app.post('/api/stats/song/:id', (req, res) => {
-    const data = readData();
+    const data = readData(req.dataFile);
     ensureStats(data);
 
     const songId = req.params.id;
@@ -565,13 +644,13 @@ app.post('/api/stats/song/:id', (req, res) => {
     }
     data.stats.songViews[songId]++;
 
-    writeData(data);
+    writeData(data, req.dataFile);
     res.json({ success: true, views: data.stats.songViews[songId] });
 });
 
 // Track list view
 app.post('/api/stats/list/:id', (req, res) => {
-    const data = readData();
+    const data = readData(req.dataFile);
     ensureStats(data);
 
     const listId = req.params.id;
@@ -584,13 +663,13 @@ app.post('/api/stats/list/:id', (req, res) => {
     }
     data.stats.listViews[listId]++;
 
-    writeData(data);
+    writeData(data, req.dataFile);
     res.json({ success: true, views: data.stats.listViews[listId] });
 });
 
 // Get all stats
 app.get('/api/stats', (req, res) => {
-    const data = readData();
+    const data = readData(req.dataFile);
     ensureStats(data);
 
     // Get top songs and lists
@@ -622,25 +701,70 @@ app.get('/api/stats', (req, res) => {
     });
 });
 
-// Serve main pages
+// Helper to render pages with site config
+function renderPage(res, template, site, extraData = {}) {
+    const themeCSS = generateThemeCSS(site.theme);
+    res.render(template, {
+        site,
+        themeCSS,
+        ...extraData
+    });
+}
+
+// Serve main pages - these need to come after API routes
+// Root/index page
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    renderPage(res, 'index', req.site);
 });
 
+// Also handle index.html explicitly
+app.get('/index.html', (req, res) => {
+    renderPage(res, 'index', req.site);
+});
+
+// Catalog page
+app.get('/catalog.html', (req, res) => {
+    renderPage(res, 'catalog', req.site);
+});
+
+// List page
+app.get('/list.html', (req, res) => {
+    renderPage(res, 'list', req.site);
+});
+
+// Admin page
+app.get('/admin.html', (req, res) => {
+    renderPage(res, 'admin', req.site);
+});
+
+// Legacy routes (without .html)
 app.get('/admin', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+    renderPage(res, 'admin', req.site);
 });
 
 app.get('/list', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'list.html'));
+    renderPage(res, 'list', req.site);
+});
+
+app.get('/catalog', (req, res) => {
+    renderPage(res, 'catalog', req.site);
 });
 
 // Start server only if not in test mode
 if (process.env.NODE_ENV !== 'test') {
     app.listen(PORT, () => {
-        ensureDataFile();
+        // Ensure data files exist for all sites
+        for (const [, site] of sites) {
+            const dataFile = getDataFile(site);
+            ensureDataFile(dataFile);
+        }
+
         console.log(`Server running at http://localhost:${PORT}`);
-        console.log(`Admin panel: http://localhost:${PORT}/admin`);
+        console.log('\nConfigured sites:');
+        for (const [, site] of sites) {
+            const sitePath = site.basePath || '/';
+            console.log(`  - ${site.name}: http://localhost:${PORT}${sitePath}`);
+        }
     });
 }
 
@@ -666,8 +790,12 @@ module.exports = {
     writeData,
     ensureDataFile,
     ensureStats,
+    getDataFile,
+    // Site configuration
+    sites,
     // Constants
     DATA_FILE,
+    DEFAULT_DATA_FILE,
     MAX_ATTEMPTS,
     LOCKOUT_TIME
 };
