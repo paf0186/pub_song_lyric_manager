@@ -4,6 +4,9 @@ let songs = [];
 let lists = [];
 let editingListId = null;
 
+// Get base path from config (set by admin.ejs template)
+const basePath = (window.adminConfig && window.adminConfig.basePath) || '';
+
 // DOM Elements
 const loginScreen = document.getElementById('loginScreen');
 const adminPanel = document.getElementById('adminPanel');
@@ -99,7 +102,7 @@ async function handleLogin(e) {
     const password = document.getElementById('password').value;
 
     try {
-        const response = await fetch('api/auth/login', {
+        const response = await fetch(basePath + '/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ password })
@@ -147,7 +150,7 @@ async function handleChangePassword(e) {
     }
 
     try {
-        const response = await fetch('api/auth/change-password', {
+        const response = await fetch(basePath + '/api/auth/change-password', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ currentPassword, newPassword })
@@ -177,7 +180,7 @@ function showAdminPanel() {
 // Load songs
 async function loadSongs() {
     try {
-        const response = await fetch('api/songs');
+        const response = await fetch(basePath + '/api/songs');
         songs = await response.json();
         renderSongsList();
         renderSongCheckboxes();
@@ -189,7 +192,7 @@ async function loadSongs() {
 // Load lists
 async function loadLists() {
     try {
-        const response = await fetch('api/lists');
+        const response = await fetch(basePath + '/api/lists');
         lists = await response.json();
         renderLists();
     } catch (error) {
@@ -371,7 +374,7 @@ async function handleAddSong(e) {
     const lyrics = document.getElementById('songLyrics').value.trim();
 
     try {
-        const response = await fetch('api/songs', {
+        const response = await fetch(basePath + '/api/songs', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title, lyrics })
@@ -415,7 +418,7 @@ async function handleEditSong(e) {
     const lyrics = document.getElementById('editSongLyrics').value.trim();
 
     try {
-        const response = await fetch(`api/songs/${id}`, {
+        const response = await fetch(`${basePath}/api/songs/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title, lyrics })
@@ -438,7 +441,7 @@ async function deleteSong(id) {
     if (!confirm('Are you sure you want to delete this song?')) return;
 
     try {
-        const response = await fetch(`api/songs/${id}`, {
+        const response = await fetch(`${basePath}/api/songs/${id}`, {
             method: 'DELETE'
         });
 
@@ -481,7 +484,7 @@ async function handleListSubmit(e) {
     }
 
     try {
-        const url = editingListId ? `api/lists/${editingListId}` : 'api/lists';
+        const url = editingListId ? `${basePath}/api/lists/${editingListId}` : `${basePath}/api/lists`;
         const method = editingListId ? 'PUT' : 'POST';
 
         const response = await fetch(url, {
@@ -551,7 +554,7 @@ async function deleteList(id) {
     if (!confirm('Are you sure you want to delete this list?')) return;
 
     try {
-        const response = await fetch(`api/lists/${id}`, {
+        const response = await fetch(`${basePath}/api/lists/${id}`, {
             method: 'DELETE'
         });
 
@@ -572,7 +575,7 @@ async function showQrCode(listId) {
     if (!list) return;
 
     try {
-        const response = await fetch(`api/qr/${listId}`);
+        const response = await fetch(`${basePath}/api/qr/${listId}`);
         const data = await response.json();
 
         qrListName.textContent = list.name;

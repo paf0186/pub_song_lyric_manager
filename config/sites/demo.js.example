@@ -1,0 +1,84 @@
+/**
+ * Example Site Configuration
+ *
+ * This is an example of how to create a second site with different branding.
+ * To use it:
+ * 1. Copy this file to 'demo.js' (remove .example extension)
+ * 2. Create the data file at data/demo-data.json
+ * 3. Customize the settings below
+ * 4. Restart the server
+ *
+ * The site will be accessible at http://localhost:3000/demo/
+ */
+module.exports = {
+    // Unique identifier for this site
+    id: 'demo',
+
+    // Site identity - shown in headers, titles, etc.
+    name: 'Demo Lyrics Collection',
+    shortName: 'Demo Lyrics',
+    tagline: 'A demonstration site',
+
+    // URL path prefix - site will be at /demo/
+    basePath: '/demo',
+
+    // Data file location (relative to project root)
+    // Each site can have its own separate data file
+    dataFile: 'data/demo-data.json',
+
+    // Favicon path (relative to public directory)
+    // Place your favicon at public/demo-favicon.ico
+    favicon: '/demo-favicon.ico',
+
+    // Theme colors - override the defaults
+    // Use a different color scheme for this site
+    theme: {
+        light: {
+            primaryColor: '#8b5cf6',      // Purple
+            primaryDark: '#7c3aed',
+            primaryLight: '#f3e8ff',
+            secondaryColor: '#a78bfa',
+            successColor: '#22c55e',
+            dangerColor: '#ef4444'
+        },
+        dark: {
+            primaryColor: '#a78bfa',
+            primaryDark: '#c4b5fd',
+            primaryLight: '#3b2d5e',
+            secondaryColor: '#c4b5fd',
+            successColor: '#4ade80',
+            dangerColor: '#f87171'
+        }
+    },
+
+    // Feature toggles - enable/disable features per site
+    features: {
+        qrCodes: true,
+        statistics: true,
+        admin: true,
+        search: true,
+        print: true,
+        download: true
+    },
+
+    // UI Labels - customize text throughout the site
+    labels: {
+        allSongs: 'All Items',
+        songLists: 'Collections',
+        home: 'Home',
+        adminPanel: 'Admin',
+        searchPlaceholder: 'Search...',
+        searchHint: 'Search by title or content',
+        shareThisPage: 'Share this page',
+        shareThisList: 'Share this collection',
+        noSongsFound: 'No items found',
+        emptyCatalog: 'No items yet. Add some from the admin panel!',
+        emptyList: 'This collection is empty.',
+        print: 'Print',
+        download: 'Download',
+        copy: 'Copy',
+        shareLink: 'Share',
+        printAll: 'Print All',
+        downloadAll: 'Download All'
+    }
+};
