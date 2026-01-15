@@ -1,0 +1,11 @@
+{
+  "songs": [],
+  "lists": [],
+  "admin": {
+    "password": "admin123"
+  },
+  "stats": {
+    "songViews": {},
+    "listViews": {}
+  }
+}
