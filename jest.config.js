@@ -7,6 +7,7 @@ module.exports = {
     maxWorkers: 1,
     collectCoverageFrom: [
         'server.js',
+        'config/site-loader.js',
         '!node_modules/**',
         '!coverage/**'
     ],

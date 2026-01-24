@@ -92,6 +92,33 @@ describe('Songs API', () => {
             expect(res.body.title).toBe('Trimmed Title');
             expect(res.body.lyrics).toBe('Trimmed lyrics');
         });
+
+        test('creates song with optional URL', async () => {
+            const res = await request(app)
+                .post('/api/songs')
+                .send({ title: 'Song With URL', lyrics: 'Test lyrics', url: 'https://example.com/song' });
+
+            expect(res.status).toBe(201);
+            expect(res.body.url).toBe('https://example.com/song');
+        });
+
+        test('trims URL whitespace', async () => {
+            const res = await request(app)
+                .post('/api/songs')
+                .send({ title: 'Song', lyrics: 'Lyrics', url: '  https://example.com  ' });
+
+            expect(res.status).toBe(201);
+            expect(res.body.url).toBe('https://example.com');
+        });
+
+        test('ignores empty URL', async () => {
+            const res = await request(app)
+                .post('/api/songs')
+                .send({ title: 'Song', lyrics: 'Lyrics', url: '   ' });
+
+            expect(res.status).toBe(201);
+            expect(res.body.url).toBeUndefined();
+        });
     });
 
     describe('PUT /api/songs/:id', () => {
@@ -111,6 +138,45 @@ describe('Songs API', () => {
                 .send({ title: 'Updated' });
 
             expect(res.status).toBe(404);
+        });
+
+        test('adds URL to song', async () => {
+            const res = await request(app)
+                .put('/api/songs/song1')
+                .send({ url: 'https://example.com/song1' });
+
+            expect(res.status).toBe(200);
+            expect(res.body.url).toBe('https://example.com/song1');
+        });
+
+        test('updates existing URL', async () => {
+            // First add a URL
+            await request(app)
+                .put('/api/songs/song1')
+                .send({ url: 'https://example.com/old' });
+
+            // Then update it
+            const res = await request(app)
+                .put('/api/songs/song1')
+                .send({ url: 'https://example.com/new' });
+
+            expect(res.status).toBe(200);
+            expect(res.body.url).toBe('https://example.com/new');
+        });
+
+        test('clears URL when set to empty string', async () => {
+            // First add a URL
+            await request(app)
+                .put('/api/songs/song1')
+                .send({ url: 'https://example.com' });
+
+            // Then clear it
+            const res = await request(app)
+                .put('/api/songs/song1')
+                .send({ url: '' });
+
+            expect(res.status).toBe(200);
+            expect(res.body.url).toBeUndefined();
         });
     });
 
@@ -167,6 +233,19 @@ describe('Lists API', () => {
             expect(res.body.songs[1].title).toBe('Chariots');
         });
 
+        test('returns songs in custom order when useCustomOrder is true', async () => {
+            // Update list to use custom order with song3 first, then song1
+            await request(app)
+                .put('/api/lists/list1')
+                .send({ songIds: ['song3', 'song1'], useCustomOrder: true });
+
+            const res = await request(app).get('/api/lists/list1');
+            expect(res.status).toBe(200);
+            // Should preserve order: Chariots (song3), then Apple Tree (song1)
+            expect(res.body.songs[0].title).toBe('Chariots');
+            expect(res.body.songs[1].title).toBe('Apple Tree Wassail');
+        });
+
         test('returns 404 for non-existent list', async () => {
             const res = await request(app).get('/api/lists/nonexistent');
             expect(res.status).toBe(404);
@@ -219,6 +298,15 @@ describe('Lists API', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.songIds).toEqual(['song2']);
+        });
+
+        test('updates useCustomOrder flag', async () => {
+            const res = await request(app)
+                .put('/api/lists/list1')
+                .send({ useCustomOrder: true });
+
+            expect(res.status).toBe(200);
+            expect(res.body.useCustomOrder).toBe(true);
         });
 
         test('returns 404 for non-existent list', async () => {
@@ -338,6 +426,33 @@ describe('QR Code API', () => {
         test('returns 404 for non-existent list', async () => {
             const res = await request(app).get('/api/qr/nonexistent');
             expect(res.status).toBe(404);
+        });
+    });
+
+    describe('GET /api/qr/song/:songId', () => {
+        test('generates QR code for song with URL', async () => {
+            // First add a URL to a song
+            await request(app)
+                .put('/api/songs/song1')
+                .send({ url: 'https://example.com/song' });
+
+            const res = await request(app).get('/api/qr/song/song1');
+            expect(res.status).toBe(200);
+            expect(res.body.qrCode).toBeDefined();
+            expect(res.body.qrCode).toMatch(/^data:image\/png;base64,/);
+            expect(res.body.url).toBe('https://example.com/song');
+        });
+
+        test('returns 404 for song without URL', async () => {
+            const res = await request(app).get('/api/qr/song/song1');
+            expect(res.status).toBe(404);
+            expect(res.body.error).toBe('Song has no URL');
+        });
+
+        test('returns 404 for non-existent song', async () => {
+            const res = await request(app).get('/api/qr/song/nonexistent');
+            expect(res.status).toBe(404);
+            expect(res.body.error).toBe('Song not found');
         });
     });
 });
@@ -673,6 +788,37 @@ describe('Static Routes', () => {
 
     test('serves list page', async () => {
         const res = await request(app).get('/list');
+        expect(res.status).toBe(200);
+        expect(res.type).toMatch(/html/);
+    });
+
+    test('serves catalog page', async () => {
+        const res = await request(app).get('/catalog');
+        expect(res.status).toBe(200);
+        expect(res.type).toMatch(/html/);
+    });
+
+    // HTML extension routes
+    test('serves index.html', async () => {
+        const res = await request(app).get('/index.html');
+        expect(res.status).toBe(200);
+        expect(res.type).toMatch(/html/);
+    });
+
+    test('serves catalog.html', async () => {
+        const res = await request(app).get('/catalog.html');
+        expect(res.status).toBe(200);
+        expect(res.type).toMatch(/html/);
+    });
+
+    test('serves list.html', async () => {
+        const res = await request(app).get('/list.html');
+        expect(res.status).toBe(200);
+        expect(res.type).toMatch(/html/);
+    });
+
+    test('serves admin.html', async () => {
+        const res = await request(app).get('/admin.html');
         expect(res.status).toBe(200);
         expect(res.type).toMatch(/html/);
     });
